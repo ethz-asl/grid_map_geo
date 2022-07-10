@@ -1,6 +1,10 @@
 # grid_map_geo
 This package provides a georeferenced extension to the elevation map [grid_map](https://github.com/ANYbotics/grid_map)
 
+![141826609-d1443a39-3a54-4669-ab93-82bbd2f02557](https://user-images.githubusercontent.com/5248102/178147563-ca6f17e2-b7ca-4e01-92ae-1f8f0fc417f7.png)
+
+**Authors: Jaeyoung Lim<br />
+Affiliation: [ETH Zurich, Autonomous Systems Lab](https://asl.ethz.ch/)<br />**
 ## Setup
 Install the dependencies. This package depends on gdal, to read georeferenced images and GeoTIFF files.
 ```

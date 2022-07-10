@@ -106,7 +106,7 @@ class GridMapGeo {
     return target_coordinates;
   }
 
- private:
+ protected:
   grid_map::GridMap grid_map_;
   double localorigin_e_{789823.93};  // duerrboden berghaus
   double localorigin_n_{177416.56};
