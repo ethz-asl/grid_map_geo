@@ -68,6 +68,7 @@ class GridMapGeo {
   bool Load(const std::string& map_path, bool algin_terrain, const std::string color_map_path = "");
   bool initializeFromGeotiff(const std::string& path, bool align_terrain = true);
   bool addColorFromGeotiff(const std::string& path);
+  bool addLayerFromShape(const std::string& path, const std::string& layer);
   bool AddLayerDistanceTransform(const std::string& string);
   grid_map::GridMap& getGridMap() { return grid_map_; }
   void setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin);
