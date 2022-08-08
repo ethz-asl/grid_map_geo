@@ -53,7 +53,6 @@ bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std
     bool color_loaded = addColorFromGeotiff(color_map_path);
   }
   if (!loaded) return false;
-  AddLayerDistanceTransform("distance_surface");
   return true;
 }
 
@@ -144,6 +143,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
   grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
   grid_map_ = grid_map_.getTransformedMap(transform, "max_elevation", grid_map_.getFrameId(), true);
+  std::cout << "Done reading DEM" << std::endl;
   return true;
 }
 

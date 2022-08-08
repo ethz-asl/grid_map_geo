@@ -67,6 +67,7 @@ int main(int argc, char **argv) {
     /// TODO: Publish gridmap
     MapPublishOnce(original_map_pub, map->getGridMap());
     ros::Duration(10.0).sleep();
+    ros::Duration(3.0).sleep();
   }
 
   ros::spin();
