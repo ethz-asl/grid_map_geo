@@ -4,7 +4,7 @@
 
     <node pkg="grid_map_geo" type="test_tif_loader" name="test_tif_loader" output="screen">
         <param name="tif_path" value="$(find grid_map_geo)/resources/sertig.tif"/>
-        <param name="color_path" value="$(find grid_map_geo)/resources/sertig_color.tif"/>
+        <!-- <param name="color_path" value="$(find grid_map_geo)/resources/sertig_color.tif"/> -->
     </node>
 
     <group if="$(arg visualization)">
