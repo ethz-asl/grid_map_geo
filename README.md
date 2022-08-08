@@ -34,5 +34,5 @@ catkin build -j$(nproc) -l$(nproc) grid_map_geo
 ## Running the package
 The default launch file can be run as the following command. 
 ```
-roslaunch grid_map_geo test_grid_map_geo.launch
+roslaunch grid_map_geo load_tif.launch
 ```
