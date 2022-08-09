@@ -208,9 +208,8 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   return true;
 }
 
-bool GridMapGeo::AddLayerDistanceTransform(const std::string &string) {
-  double surface_distance = 50.0;
-  grid_map_.add("distance_surface");
+bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name) {
+  grid_map_.add(layer_name);
   // grid_map_.add("offset_surface");
   // grid_map_.add("error_surface");
 
@@ -220,7 +219,7 @@ bool GridMapGeo::AddLayerDistanceTransform(const std::string &string) {
     grid_map_.getPosition3("elevation", MapIndex, center_pos);
     center_pos(2) = center_pos(2) + surface_distance;
     Eigen::Vector2d center_pos_2d(center_pos(0), center_pos(1));
-    grid_map_.at("distance_surface", MapIndex) = center_pos(2);  // elevation
+    grid_map_.at(layer_name, MapIndex) = center_pos(2);  // elevation
     // grid_map_.at("offset_surface", MapIndex) = center_pos(2);    // elevation
     for (grid_map::CircleIterator submapIterator(grid_map_, center_pos_2d, surface_distance);
          !submapIterator.isPastEnd(); ++submapIterator) {
@@ -230,7 +229,7 @@ bool GridMapGeo::AddLayerDistanceTransform(const std::string &string) {
       double distance = (cell_position - center_pos).norm();
       if (distance < surface_distance) {
         double distance_2d = (Eigen::Vector2d(cell_position(0), cell_position(1)) - center_pos_2d).norm();
-        grid_map_.at("distance_surface", MapIndex) =
+        grid_map_.at(layer_name, MapIndex) =
             cell_position(2) + std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
       }
     }
