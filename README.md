@@ -1,7 +1,7 @@
 # grid_map_geo
 [![Build Test](https://github.com/ethz-asl/grid_map_geo/actions/workflows/build_test.yml/badge.svg)](https://github.com/ethz-asl/grid_map_geo/actions/workflows/build_test.yml)
 
-This package provides a georeferenced extension to the elevation map [grid_map](https://github.com/ANYbotics/grid_map)
+This package provides a georeferenced extension to the elevation map [grid_map](https://github.com/ANYbotics/grid_map) using [GDAL](https://gdal.org/), library for raster and vector geospatial data formats
 
 ![141826609-d1443a39-3a54-4669-ab93-82bbd2f02557](https://user-images.githubusercontent.com/5248102/178147563-ca6f17e2-b7ca-4e01-92ae-1f8f0fc417f7.png)
 
