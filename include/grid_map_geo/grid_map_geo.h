@@ -34,9 +34,8 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
-enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781 };
+#include "grid_map_geo/transform.h"
 
-// #include <grid_map_msgs/GridMap.h>
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
@@ -57,54 +56,66 @@ class GridMapGeo {
   virtual ~GridMapGeo();
 
   /**
+   * @brief Get the Grid Map object
+   *
+   * @return grid_map::GridMap&
+   */
+  grid_map::GridMap& getGridMap() { return grid_map_; }
+
+  /**
+   * @brief Set the Global Coordinate of the Origin of the map
+   *
+   * @param src_coord
+   * @param origin
+   */
+  void setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin);
+
+  /**
+   * @brief Set the Altitude Origin object
+   * 
+   * @param altitude 
+   */
+  void setAltitudeOrigin(const double altitude) { localorigin_altitude_ = altitude; };
+
+  /**
    * @brief Helper function for loading terrain from path
    *
-   * @param map_path Path to dsm path (Supported formats are *.tif *.obj)
+   * @param map_path Path to dsm path (Supported formats are *.tif)
    * @param algin_terrain Geo align terrain
    * @param color_map_path  Path to color raster files to visualize terrain texture (Supported formats are *.tif)
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
   bool Load(const std::string& map_path, bool algin_terrain, const std::string color_map_path = "");
+
+  /**
+   * @brief Initialize grid map from a geotiff file
+   *
+   * @param path Path to dsm path (Supported formats are *.tif)
+   * @param align_terrain
+   * @return true Successfully loaded terrain
+   * @return false Failed to load terrain
+   */
   bool initializeFromGeotiff(const std::string& path, bool align_terrain = true);
+
+  /**
+   * @brief Load a color layer from a geotiff file (orthomosaic)
+   *
+   * @param path Path to orthomosaic  path (Supported formats are *.tif)
+   * @return true Successfully loaded terrain
+   * @return false Failed to load terrain
+   */
   bool addColorFromGeotiff(const std::string& path);
-  bool AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name);
-  grid_map::GridMap& getGridMap() { return grid_map_; }
-  void setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin);
-  void setAltitudeOrigin(const double altitude) { localorigin_altitude_ = altitude; };
-  static Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord,
-                                              const Eigen::Vector3d source_coordinates) {
-    OGRSpatialReference source, target;
-    source.importFromEPSG(static_cast<int>(src_coord));
-    target.importFromEPSG(static_cast<int>(tgt_coord));
 
-    OGRPoint p;
-    p.setX(source_coordinates(0));
-    p.setY(source_coordinates(1));
-    p.setZ(source_coordinates(2));
-    p.assignSpatialReference(&source);
-
-    p.transformTo(&target);
-    Eigen::Vector3d target_coordinates(p.getX(), p.getY(), p.getZ());
-    return target_coordinates;
-  }
-  static Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt,
-                                              const Eigen::Vector3d source_coordinates) {
-    OGRSpatialReference source, target;
-    char* wkt_string = const_cast<char*>(wkt.c_str());
-    source.importFromEPSG(static_cast<int>(src_coord));
-    target.importFromWkt(&wkt_string);
-
-    OGRPoint p;
-    p.setX(source_coordinates(0));
-    p.setY(source_coordinates(1));
-    p.setZ(source_coordinates(2));
-    p.assignSpatialReference(&source);
-
-    p.transformTo(&target);
-    Eigen::Vector3d target_coordinates(p.getX(), p.getY(), p.getZ());
-    return target_coordinates;
-  }
+  /**
+   * @brief Add layer using distance transform
+   * 
+   * @param surface_distance 
+   * @param layer_name 
+   * @return true 
+   * @return false 
+   */
+  bool AddLayerDistanceTransform(const double surface_distance, const std::string& layer_name);
 
  protected:
   grid_map::GridMap grid_map_;
