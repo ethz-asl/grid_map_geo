@@ -45,11 +45,11 @@ enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21
 
 /**
  * @brief Helper function for transforming using gdal
- * 
- * @param src_coord 
- * @param tgt_coord 
- * @param source_coordinates 
- * @return Eigen::Vector3d 
+ *
+ * @param src_coord
+ * @param tgt_coord
+ * @param source_coordinates
+ * @return Eigen::Vector3d
  */
 Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
@@ -69,14 +69,13 @@ Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen
 
 /**
  * @brief Helper function for transforming using gdal
- * 
- * @param src_coord 
- * @param wkt 
- * @param source_coordinates 
- * @return Eigen::Vector3d 
+ *
+ * @param src_coord
+ * @param wkt
+ * @param source_coordinates
+ * @return Eigen::Vector3d
  */
-Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt,
-                                            const Eigen::Vector3d source_coordinates) {
+Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
   char* wkt_string = const_cast<char*>(wkt.c_str());
   source.importFromEPSG(static_cast<int>(src_coord));

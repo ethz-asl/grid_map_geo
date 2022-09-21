@@ -72,8 +72,8 @@ class GridMapGeo {
 
   /**
    * @brief Set the Altitude Origin object
-   * 
-   * @param altitude 
+   *
+   * @param altitude
    */
   void setAltitudeOrigin(const double altitude) { localorigin_altitude_ = altitude; };
 
@@ -109,11 +109,11 @@ class GridMapGeo {
 
   /**
    * @brief Add layer using distance transform
-   * 
-   * @param surface_distance 
-   * @param layer_name 
-   * @return true 
-   * @return false 
+   *
+   * @param surface_distance
+   * @param layer_name
+   * @return true
+   * @return false
    */
   bool AddLayerDistanceTransform(const double surface_distance, const std::string& layer_name);
 

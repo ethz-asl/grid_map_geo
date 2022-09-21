@@ -102,6 +102,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   localorigin_altitude_ = origin_lv03(2);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
+
   if (align_terrain) {
     std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
     double map_position_x = mapcenter_e - localorigin_e_;
@@ -110,17 +111,16 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   } else {
     std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
   }
+
   grid_map_.setGeometry(length, resolution, position);
   grid_map_.setFrameId("map");
   grid_map_.add("elevation");
-  grid_map_.add("max_elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
 
   std::vector<float> data(width * height, 0.0f);
   elevationBand->RasterIO(GF_Read, 0, 0, width, height, &data[0], width, height, GDT_Float32, 0, 0);
 
   grid_map::Matrix &layer_elevation = grid_map_["elevation"];
-  grid_map::Matrix &layer_max_elevation = grid_map_["max_elevation"];
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index gridMapIndex = *iterator;
     // TODO: This may be wrong if the pixelSizeY > 0
@@ -128,7 +128,6 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
     int y = gridMapIndex(1);
 
     layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
-    layer_max_elevation(x, y) = layer_elevation(x, y) + 150.0;
   }
 
   /// TODO: This is a workaround with the problem of gdal 3 not translating altitude correctly.
@@ -142,8 +141,6 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   Eigen::AngleAxisd meshlab_rotation(Eigen::AngleAxisd::Identity());
   Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
   grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
-  grid_map_ = grid_map_.getTransformedMap(transform, "max_elevation", grid_map_.getFrameId(), true);
-  std::cout << "Done reading DEM" << std::endl;
   return true;
 }
 
