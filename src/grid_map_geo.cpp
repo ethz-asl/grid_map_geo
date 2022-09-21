@@ -247,13 +247,22 @@ bool GridMapGeo::addRoiFromGeotiff(const std::string &path) {
   std::vector<float> data(width * height, 0.0f);
   raster_blue->RasterIO(GF_Read, 0, 0, width, height, &data[0], width, height, GDT_Float32, 0, 0);
 
+  grid_map_.add("roi_elevation");
   grid_map::Matrix &layer_roi = grid_map_["roi"];
+  grid_map::Matrix &layer_roi_elevation = grid_map_["roi_elevation"];
+  grid_map::Matrix &layer_elevation = grid_map_["elevation"];
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index gridMapIndex = *iterator;
     /// TODO: This may be wrong if the pixelSizeY > 0
     int x = width - 1 - gridMapIndex(0);
     int y = gridMapIndex(1);
-    layer_roi(x, y) = ((data[gridMapIndex(0) + width * gridMapIndex(1)] < 116.0) && (data[gridMapIndex(0) + width * gridMapIndex(1)] > 114.0)) ? 1.0 : 0.0;
+    if ((data[gridMapIndex(0) + width * gridMapIndex(1)] < 116.0) && (data[gridMapIndex(0) + width * gridMapIndex(1)] > 114.0)) {
+      layer_roi(x, y) =  1.0;
+      layer_roi_elevation(x, y) = layer_elevation(x, y);
+    } else {
+      layer_roi(x, y) =  0.0;
+      layer_roi_elevation(x, y) = NAN;
+    }
     if ((data[gridMapIndex(0) + width * gridMapIndex(1)] < 116.0) && (data[gridMapIndex(0) + width * gridMapIndex(1)] > 114.0)) {
     }
   }
