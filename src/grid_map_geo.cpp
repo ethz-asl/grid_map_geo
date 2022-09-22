@@ -96,18 +96,20 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   double mapcenter_e = originX + pixelSizeX * width * 0.5;
   double mapcenter_n = originY + pixelSizeY * height * 0.5;
 
-  Eigen::Vector3d origin_lv03 =
-      transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
-  localorigin_e_ = origin_lv03(0);
-  localorigin_n_ = origin_lv03(1);
-  localorigin_altitude_ = origin_lv03(2);
+  // Eigen::Vector3d origin_lv03 =
+  //     transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
+  // localorigin_e_ = origin_lv03(0);
+  // localorigin_n_ = origin_lv03(1);
+  // localorigin_altitude_ = origin_lv03(2);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
   if (align_terrain) {
-    std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
     double map_position_x = mapcenter_e - localorigin_e_;
     double map_position_y = mapcenter_n - localorigin_n_;
     position = Eigen::Vector2d(map_position_x, map_position_y);
+    std::cout << "[GridMapGeo] Aligning terrain! Local map position: " << position.transpose() << std::endl;
+    std::cout << "[GridMapGeo]   -  map_center: " << mapcenter_e << ", " << mapcenter_n << std::endl;
+    std::cout << "[GridMapGeo]   -  localorigin: " << localorigin_e_ << ", " << localorigin_n_ << std::endl;
   } else {
     std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
   }

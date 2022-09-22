@@ -3,8 +3,8 @@
     <node pkg="tf" type="static_transform_publisher" name="world_map" args="0 0 0 0 0 0 world map 10"/>
 
     <node pkg="grid_map_geo" type="test_tif_loader" name="test_tif_loader" output="screen">
-        <param name="tif_path" value="$(find grid_map_geo)/resources/sertig.tif"/>
-        <param name="color_path" value="$(find grid_map_geo)/resources/sertig_color.tif"/>
+        <param name="tif_path" value="$(find grid_map_geo)/resources/sertig_valley.tif"/>
+        <param name="color_path" value="$(find grid_map_geo)/resources/sertig_valley_color.tif"/>
     </node>
 
     <group if="$(arg visualization)">

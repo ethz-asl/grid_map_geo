@@ -54,14 +54,14 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh("");
   ros::NodeHandle nh_private("~");
 
-  ros::Publisher original_map_pub = nh.advertise<grid_map_msgs::GridMap>("elevation_map", 1, true);
+  ros::Publisher original_map_pub = nh.advertise<grid_map_msgs::GridMap>("large_scale_map", 1, true);
 
   std::string file_path, color_path;
   nh_private.param<std::string>("tif_path", file_path, "");
   nh_private.param<std::string>("color_path", color_path, "");
 
   std::shared_ptr<GridMapGeo> map = std::make_shared<GridMapGeo>();
-  map->Load(file_path, false, color_path);
+  map->Load(file_path, true, color_path);
 
   while (true) {
     /// TODO: Publish gridmap
