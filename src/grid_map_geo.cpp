@@ -236,6 +236,18 @@ bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const 
   return true;
 }
 
+bool GridMapGeo::AddLayerOffset(const double offset_distance, const std::string &layer_name) {
+  grid_map_.add(layer_name);
+
+  for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index MapIndex = *iterator;
+    Eigen::Vector3d center_pos;
+    grid_map_.getPosition3("elevation", MapIndex, center_pos);
+    grid_map_.at(layer_name, MapIndex) = center_pos(2) + offset_distance;  // elevation
+  }
+  return true;
+}
+
 void GridMapGeo::setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin) {
   // Transform global origin into CH1903 / LV03 coordinates
   localorigin_wgs84_.espg = src_coord;
