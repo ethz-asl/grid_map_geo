@@ -205,7 +205,8 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   return true;
 }
 
-bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name) {
+bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name,
+                                           std::string reference_layer) {
   grid_map_.add(layer_name);
   // grid_map_.add("offset_surface");
   // grid_map_.add("error_surface");
@@ -213,25 +214,56 @@ bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const 
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index MapIndex = *iterator;
     Eigen::Vector3d center_pos;
-    grid_map_.getPosition3("elevation", MapIndex, center_pos);
+    grid_map_.getPosition3(reference_layer, MapIndex, center_pos);
     center_pos(2) = center_pos(2) + surface_distance;
     Eigen::Vector2d center_pos_2d(center_pos(0), center_pos(1));
     grid_map_.at(layer_name, MapIndex) = center_pos(2);  // elevation
     // grid_map_.at("offset_surface", MapIndex) = center_pos(2);    // elevation
-    for (grid_map::CircleIterator submapIterator(grid_map_, center_pos_2d, surface_distance);
+    for (grid_map::CircleIterator submapIterator(grid_map_, center_pos_2d, std::abs(surface_distance));
          !submapIterator.isPastEnd(); ++submapIterator) {
       const grid_map::Index SubmapIndex = *submapIterator;
       Eigen::Vector3d cell_position;
-      grid_map_.getPosition3("elevation", SubmapIndex, cell_position);
+      grid_map_.getPosition3(reference_layer, SubmapIndex, cell_position);
       double distance = (cell_position - center_pos).norm();
-      if (distance < surface_distance) {
+      if (std::abs(distance) < std::abs(surface_distance)) {
         double distance_2d = (Eigen::Vector2d(cell_position(0), cell_position(1)) - center_pos_2d).norm();
-        grid_map_.at(layer_name, MapIndex) =
-            cell_position(2) + std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
+        if (surface_distance > 0.0) {
+          grid_map_.at(layer_name, MapIndex) =
+              cell_position(2) + std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
+        } else {
+          grid_map_.at(layer_name, MapIndex) =
+              cell_position(2) - std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
+        }
       }
     }
     // grid_map_.at("error_surface", MapIndex) =
     //     grid_map_.at("distance_surface", MapIndex) - grid_map_.at("offset_surface", MapIndex);  // elevation
+  }
+  return true;
+}
+
+bool GridMapGeo::AddLayerHorizontalDistanceTransform(const double surface_distance, const std::string &layer_name,
+                                                     std::string reference_layer) {
+  grid_map_.add(layer_name);
+
+  for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index MapIndex = *iterator;
+    Eigen::Vector3d center_pos;
+    grid_map_.getPosition3(reference_layer, MapIndex, center_pos);
+    Eigen::Vector2d center_pos_2d(center_pos(0), center_pos(1));
+    grid_map_.at(layer_name, MapIndex) = center_pos(2);  // elevation of reference layer
+    for (grid_map::CircleIterator submapIterator(grid_map_, center_pos_2d, std::abs(surface_distance));
+         !submapIterator.isPastEnd(); ++submapIterator) {
+      const grid_map::Index SubmapIndex = *submapIterator;
+      Eigen::Vector3d cell_position;
+      grid_map_.getPosition3(reference_layer, SubmapIndex, cell_position);
+      double distance = cell_position(2) - center_pos(2);
+      if (surface_distance > 0.0 && distance > 0.0) {
+        grid_map_.at(layer_name, MapIndex) = cell_position(2) + distance;
+      } else if (surface_distance < 0.0 && distance < 0.0) {
+        grid_map_.at(layer_name, MapIndex) = cell_position(2) + distance;
+      }
+    }
   }
   return true;
 }
