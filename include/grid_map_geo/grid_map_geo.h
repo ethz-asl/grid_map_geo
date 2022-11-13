@@ -135,6 +135,16 @@ class GridMapGeo {
   bool addLayerFromGeotiff(const std::string& layer_name, const std::string& path);
 
   /**
+   * @brief Add a layer from a shapefile
+   *
+   * @param path path to shape file
+   * @param layer name of the layer
+   * @return true
+   * @return false
+   */
+  bool addLayerFromShape(const std::string& layer, const std::string& path);
+
+  /**
    * @brief Add layer using distance transform
    *
    * @param surface_distance surface distance to compute. If smaller than zero, will compute the distance transform

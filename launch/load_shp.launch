@@ -1,0 +1,14 @@
+<launch>
+    <arg name="visualization" default="true"/>
+    <node pkg="tf" type="static_transform_publisher" name="world_map" args="0 0 0 0 0 0 world map 10"/>
+
+    <node pkg="grid_map_geo" type="test_shp_loader" name="test_shp_loader" output="screen">
+        <param name="tif_path" value="$(find terrain_models)/models/sertig.tif"/>
+        <param name="color_path" value="$(find terrain_models)/models/sertig_color.tif"/>
+        <param name="shape_path" value="$(find grid_map_geo)/resources/LDB_Davos_2122.shp"/>
+    </node>
+
+    <group if="$(arg visualization)">
+        <node type="rviz" name="rviz" pkg="rviz" args="-d $(find grid_map_geo)/launch/config.rviz" />
+    </group>
+</launch>

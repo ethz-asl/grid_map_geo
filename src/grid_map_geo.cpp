@@ -43,6 +43,8 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
+#include <gdal/ogrsf_frmts.h>
+
 GridMapGeo::GridMapGeo() {}
 
 GridMapGeo::~GridMapGeo() {}
@@ -255,6 +257,23 @@ bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::s
     int y = gridMapIndex(1);
     layer_roi(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
   }
+  return true;
+}
+
+bool GridMapGeo::addLayerFromShape(const std::string &layer, const std::string &path) {
+  GDALAllRegister();
+  GDALDataset *dataset = (GDALDataset *)GDALOpenEx(path.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
+  std::cout << std::endl << "Loading layer from shape file: " << path << std::endl;
+  if (dataset == NULL) {
+    printf("[GridMapGeo] Open failed.\n");
+    exit(1);
+  }
+
+  std::cout << std::endl << "  -  Number of layers: " << dataset->GetLayerCount() << std::endl;
+  for (auto&& poLayer : dataset->GetLayers()) {
+    std::cout << "  - Layer: " << poLayer->GetName() << std::endl;
+  }
+
   return true;
 }
 
