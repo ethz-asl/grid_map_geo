@@ -269,11 +269,27 @@ bool GridMapGeo::addLayerFromShape(const std::string &layer, const std::string &
     exit(1);
   }
 
-  std::cout << std::endl << "  -  Number of layers: " << dataset->GetLayerCount() << std::endl;
-  for (auto&& poLayer : dataset->GetLayers()) {
-    std::cout << "  - Layer: " << poLayer->GetName() << std::endl;
+
+  double originX, originY, pixelSizeX, pixelSizeY;
+  double geoTransform[6];
+  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+    originX = geoTransform[0];
+    originY = geoTransform[3];
+    pixelSizeX = geoTransform[1];
+    pixelSizeY = geoTransform[5];
+  } else {
+    std::cout << "Failed read geotransform" << std::endl;
+    return false;
   }
 
+  std::cout << std::endl << "  -  Number of layers: " << dataset->GetLayerCount() << std::endl;
+  for (auto &&poLayer : dataset->GetLayers()) {
+    std::cout << "  - Layer: " << poLayer->GetName() << std::endl;
+
+    for (auto &poFeature : poLayer) {
+      std::cout << "    - feature: " << std::endl;
+    }
+  }
   return true;
 }
 
