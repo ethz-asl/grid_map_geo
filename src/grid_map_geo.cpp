@@ -250,18 +250,16 @@ bool GridMapGeo::AddLayerHorizontalDistanceTransform(const double surface_distan
     const grid_map::Index MapIndex = *iterator;
     Eigen::Vector3d center_pos;
     grid_map_.getPosition3(reference_layer, MapIndex, center_pos);
-    Eigen::Vector2d center_pos_2d(center_pos(0), center_pos(1));
+    const Eigen::Vector2d center_pos_2d(center_pos(0), center_pos(1));
     grid_map_.at(layer_name, MapIndex) = center_pos(2);  // elevation of reference layer
     for (grid_map::CircleIterator submapIterator(grid_map_, center_pos_2d, std::abs(surface_distance));
          !submapIterator.isPastEnd(); ++submapIterator) {
       const grid_map::Index SubmapIndex = *submapIterator;
       Eigen::Vector3d cell_position;
       grid_map_.getPosition3(reference_layer, SubmapIndex, cell_position);
-      double distance = cell_position(2) - center_pos(2);
-      if (surface_distance > 0.0 && distance > 0.0) {
-        grid_map_.at(layer_name, MapIndex) = cell_position(2) + distance;
-      } else if (surface_distance < 0.0 && distance < 0.0) {
-        grid_map_.at(layer_name, MapIndex) = cell_position(2) + distance;
+      double distance = cell_position(2) - grid_map_.at(layer_name, MapIndex);
+      if ((surface_distance > 0.0 && distance > 0.0) || (surface_distance < 0.0 && distance < 0.0)) {
+        grid_map_.at(layer_name, MapIndex) = grid_map_.at(layer_name, MapIndex) + distance;
       }
     }
   }
