@@ -108,6 +108,15 @@ class GridMapGeo {
   bool addColorFromGeotiff(const std::string& path);
 
   /**
+   * @brief Load ROI layer from geotiff
+   *
+   * @param path
+   * @return true
+   * @return false
+   */
+  bool addLayerFromGeotiff(const std::string& layer_name, const std::string& path);
+
+  /**
    * @brief Add layer using distance transform
    *
    * @param surface_distance surface distance to compute. If smaller than zero, will compute the distance transform

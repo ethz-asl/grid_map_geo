@@ -205,6 +205,56 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   return true;
 }
 
+bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::string &path) {
+  GDALAllRegister();
+  GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
+  if (!dataset) {
+    std::cout << "Failed to open" << std::endl;
+    return false;
+  }
+  std::cout << std::endl << "Loading color layer from GeoTIFF file for gridmap" << std::endl;
+
+  double originX, originY, pixelSizeX, pixelSizeY;
+  double geoTransform[6];
+  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+    originX = geoTransform[0];
+    originY = geoTransform[3];
+    pixelSizeX = geoTransform[1];
+    pixelSizeY = geoTransform[5];
+  } else {
+    std::cout << "Failed read geotransform" << std::endl;
+    return false;
+  }
+
+  // Get image metadata
+  unsigned width = dataset->GetRasterXSize();
+  unsigned height = dataset->GetRasterYSize();
+  double resolution = pixelSizeX;
+  std::cout << "Width: " << width << " Height: " << height << " Resolution: " << resolution << std::endl;
+
+  // pixelSizeY is negative because the origin of the image is the north-east corner and positive
+  // Y pixel coordinates go towards the south
+  const double lengthX = resolution * width;
+  const double lengthY = resolution * height;
+  grid_map::Length length(lengthX, lengthY);
+
+  grid_map_.add(layer_name);
+  GDALRasterBand *raster_blue = dataset->GetRasterBand(3);
+
+  std::vector<float> data(width * height, 0.0f);
+  raster_blue->RasterIO(GF_Read, 0, 0, width, height, &data[0], width, height, GDT_Float32, 0, 0);
+
+  grid_map::Matrix &layer_roi = grid_map_[layer_name];
+  for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index gridMapIndex = *iterator;
+    /// TODO: This may be wrong if the pixelSizeY > 0
+    int x = width - 1 - gridMapIndex(0);
+    int y = gridMapIndex(1);
+    layer_roi(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
+  }
+  return true;
+}
+
 bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name,
                                            std::string reference_layer) {
   grid_map_.add(layer_name);
