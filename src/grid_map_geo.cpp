@@ -197,9 +197,9 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
     int x = width - 1 - gridMapIndex(0);
     int y = gridMapIndex(1);
     Eigen::Vector3i colorVector;
-    colorVector(2) = data_red[gridMapIndex(0) + width * gridMapIndex(1)];
+    colorVector(0) = data_red[gridMapIndex(0) + width * gridMapIndex(1)];
     colorVector(1) = data_green[gridMapIndex(0) + width * gridMapIndex(1)];
-    colorVector(0) = data_blue[gridMapIndex(0) + width * gridMapIndex(1)];
+    colorVector(2) = data_blue[gridMapIndex(0) + width * gridMapIndex(1)];
     grid_map::colorVectorToValue(colorVector, layer_color(x, y));
   }
   return true;
