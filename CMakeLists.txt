@@ -20,6 +20,7 @@ include_directories(
   ${Boost_INCLUDE_DIR}
   ${catkin_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  ${GDAL_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME}

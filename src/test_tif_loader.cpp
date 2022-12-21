@@ -62,6 +62,8 @@ int main(int argc, char **argv) {
 
   std::shared_ptr<GridMapGeo> map = std::make_shared<GridMapGeo>();
   map->Load(file_path, false, color_path);
+  map->getGridMap().add("offset");
+  map->getGridMap()["offset"].setConstant(-6000.0);
 
   while (true) {
     /// TODO: Publish gridmap
