@@ -63,6 +63,13 @@ class GridMapGeo {
   grid_map::GridMap& getGridMap() { return grid_map_; }
 
   /**
+   * @brief Set the Grid Map object from an external process
+   *
+   * @param map
+   */
+  void setGridMap(grid_map::GridMap& map) { grid_map_ = map; }
+
+  /**
    * @brief Set the Global Coordinate of the Origin of the map
    *
    * @param src_coord
