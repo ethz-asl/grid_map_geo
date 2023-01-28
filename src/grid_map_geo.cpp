@@ -275,7 +275,7 @@ bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const 
           center_pos(2) = cell_position(2) + elevation_difference;
         }
       } else {
-        if (center_pos(2) > cell_position(2)  - elevation_difference) {
+        if (center_pos(2) > cell_position(2) - elevation_difference) {
           center_pos(2) = cell_position(2) - elevation_difference;
         }
       }
