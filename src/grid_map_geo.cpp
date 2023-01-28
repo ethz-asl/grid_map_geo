@@ -258,34 +258,29 @@ bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::s
 bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const std::string &layer_name,
                                            std::string reference_layer) {
   grid_map_.add(layer_name);
-  // grid_map_.add("offset_surface");
-  // grid_map_.add("error_surface");
 
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index MapIndex = *iterator;
     Eigen::Vector3d center_pos;
     grid_map_.getPosition3(reference_layer, MapIndex, center_pos);
-    // grid_map_.at("offset_surface", MapIndex) = center_pos(2);    // elevation
     for (grid_map::CircleIterator submapIterator(grid_map_, center_pos.head(2), std::abs(surface_distance));
          !submapIterator.isPastEnd(); ++submapIterator) {
       const grid_map::Index SubmapIndex = *submapIterator;
       Eigen::Vector3d cell_position;
       grid_map_.getPosition3(reference_layer, SubmapIndex, cell_position);
-      double distance = (cell_position - center_pos).norm();
-      if (distance < std::abs(surface_distance)) {
-        double distance_2d = (cell_position.head(2) - center_pos.head(2)).norm();
-        double elevation_difference = std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
-        
-        if (surface_distance > 0.0) {
+      double distance_2d = (cell_position.head(2) - center_pos.head(2)).norm();
+      double elevation_difference = std::sqrt(std::pow(surface_distance, 2) - std::pow(distance_2d, 2));
+      if (surface_distance > 0.0) {
+        if (center_pos(2) < cell_position(2) + elevation_difference) {
           center_pos(2) = cell_position(2) + elevation_difference;
-        } else {
+        }
+      } else {
+        if (center_pos(2) > cell_position(2)  - elevation_difference) {
           center_pos(2) = cell_position(2) - elevation_difference;
         }
       }
     }
     grid_map_.at(layer_name, MapIndex) = center_pos(2);
-    // grid_map_.at("error_surface", MapIndex) =
-    //     grid_map_.at("distance_surface", MapIndex) - grid_map_.at("offset_surface", MapIndex);  // elevation
   }
   return true;
 }
