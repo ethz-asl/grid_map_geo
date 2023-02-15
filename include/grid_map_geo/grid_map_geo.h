@@ -79,11 +79,11 @@ class GridMapGeo {
 
   /**
    * @brief Get the Global Origin object
-   * 
-   * @param src_coord 
-   * @param origin 
+   *
+   * @param src_coord
+   * @param origin
    */
-  void getGlobalOrigin(ESPG &src_coord, Eigen::Vector3d &origin) {
+  void getGlobalOrigin(ESPG& src_coord, Eigen::Vector3d& origin) {
     src_coord = localorigin_wgs84_.espg;
     origin = localorigin_wgs84_.position;
   };
