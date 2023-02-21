@@ -94,25 +94,28 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
 
   double mapcenter_e = originX + pixelSizeX * width * 0.5;
   double mapcenter_n = originY + pixelSizeY * height * 0.5;
-
-  Eigen::Vector3d origin_lv03 =
-      transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
-  localorigin_e_ = origin_lv03(0);
-  localorigin_n_ = origin_lv03(1);
-  localorigin_altitude_ = origin_lv03(2);
+  maporigin_.espg = ESPG::CH1903_LV03;
+  maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
-  if (align_terrain) {
-    std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
-    double map_position_x = mapcenter_e - localorigin_e_;
-    double map_position_y = mapcenter_n - localorigin_n_;
-    position = Eigen::Vector2d(map_position_x, map_position_y);
-  } else {
-    std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
-  }
+  /// TODO: Generalize to set local origin as center of map position
+  // Eigen::Vector3d origin_lv03 =
+  //     transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
+  // localorigin_e_ = origin_lv03(0);
+  // localorigin_n_ = origin_lv03(1);
+  // localorigin_altitude_ = origin_lv03(2);
+  // if (align_terrain) {
+  //   std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
+  //   double map_position_x = mapcenter_e - localorigin_e_;
+  //   double map_position_y = mapcenter_n - localorigin_n_;
+  //   position = Eigen::Vector2d(map_position_x, map_position_y);
+  // } else {
+  //   std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
+  // }
 
   grid_map_.setGeometry(length, resolution, position);
+  /// TODO: Use TF for geocoordinates
   grid_map_.setFrameId("map");
   grid_map_.add("elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
@@ -137,10 +140,10 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
     altitude = grid_map_.atPosition("elevation", Eigen::Vector2d(0.0, 0.0));
   }
 
-  Eigen::Translation3d meshlab_translation(0.0, 0.0, -altitude);
-  Eigen::AngleAxisd meshlab_rotation(Eigen::AngleAxisd::Identity());
-  Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
-  grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
+  // Eigen::Translation3d meshlab_translation(0.0, 0.0, -altitude);
+  // Eigen::AngleAxisd meshlab_rotation(Eigen::AngleAxisd::Identity());
+  // Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
+  // grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
   return true;
 }
 

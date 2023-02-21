@@ -84,8 +84,8 @@ class GridMapGeo {
    * @param origin
    */
   void getGlobalOrigin(ESPG& src_coord, Eigen::Vector3d& origin) {
-    src_coord = localorigin_wgs84_.espg;
-    origin = localorigin_wgs84_.position;
+    src_coord = maporigin_.espg;
+    origin = maporigin_.position;
   };
 
   /**
@@ -174,5 +174,6 @@ class GridMapGeo {
   double localorigin_n_{177416.56};
   double localorigin_altitude_{0.0};
   Location localorigin_wgs84_;
+  Location maporigin_;
 };
 #endif
