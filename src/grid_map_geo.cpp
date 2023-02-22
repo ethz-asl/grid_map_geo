@@ -326,6 +326,6 @@ bool GridMapGeo::AddLayerOffset(const double offset_distance, const std::string 
 
 void GridMapGeo::setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin) {
   // Transform global origin into CH1903 / LV03 coordinates
-  localorigin_wgs84_.espg = src_coord;
-  localorigin_wgs84_.position = origin;
+  maporigin_.espg = src_coord;
+  maporigin_.position = origin;
 }

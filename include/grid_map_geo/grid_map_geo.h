@@ -173,7 +173,6 @@ class GridMapGeo {
   double localorigin_e_{789823.93};  // duerrboden berghaus
   double localorigin_n_{177416.56};
   double localorigin_altitude_{0.0};
-  Location localorigin_wgs84_;
   Location maporigin_;
 };
 #endif
