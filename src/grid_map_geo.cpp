@@ -129,8 +129,9 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
     // TODO: This may be wrong if the pixelSizeY > 0
     int x = width - 1 - gridMapIndex(0);
     int y = gridMapIndex(1);
-
-    layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
+    double elevation = data[gridMapIndex(0) + width * gridMapIndex(1)];
+    if (elevation == 0.0) layer_elevation(x, y)= NAN;
+    else layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
   }
 
   /// TODO: This is a workaround with the problem of gdal 3 not translating altitude correctly.
