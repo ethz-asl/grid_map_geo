@@ -39,37 +39,48 @@
 
 #include "grid_map_geo/grid_map_geo.h"
 
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+
+#include "grid_map_msgs/msg/grid_map.h"
 #include "grid_map_ros/GridMapRosConverter.hpp"
 
-void MapPublishOnce(ros::Publisher &pub, grid_map::GridMap &map) {
-  map.setTimestamp(ros::Time::now().toNSec());
-  grid_map_msgs::GridMap message;
-  grid_map::GridMapRosConverter::toMessage(map, message);
-  pub.publish(message);
-}
+using namespace std::chrono_literals;
+
+class MapPublisher : public rclcpp::Node {
+  public:
+    MapPublisher() : Node("map_publisher") {
+      original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
+
+      this->declare_parameter("tif_path", ".");
+      this->declare_parameter("tif_color_path", ".");
+
+      std::string file_path = this->get_parameter("tif_path").as_string();
+      std::string color_path = this->get_parameter("tif_color_path").as_string();
+
+      map_ = std::make_shared<GridMapGeo>();
+      map_->Load(file_path, false, color_path);
+      timer_ = this->create_wall_timer(5s, std::bind(&MapPublisher::timer_callback, this));
+    }
+  private:
+    void timer_callback() {
+      auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
+      original_map_pub_->publish(std::move(msg));
+    }
+    rclcpp::TimerBase::SharedPtr timer_;
+    size_t count_{0};
+    rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
+    std::shared_ptr<GridMapGeo> map_;
+  // void MapPublishOnce(ros::Publisher &pub, grid_map::GridMap &map) {
+  //   map.setTimestamp(ros::Time::now().toNSec());
+  //   pub.publish(message);
+  // }
+};
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "gridmap_geo_tif_loader");
-  ros::NodeHandle nh("");
-  ros::NodeHandle nh_private("~");
 
-  ros::Publisher original_map_pub = nh.advertise<grid_map_msgs::GridMap>("elevation_map", 1, true);
-
-  std::string file_path, color_path;
-  nh_private.param<std::string>("tif_path", file_path, "");
-  nh_private.param<std::string>("color_path", color_path, "");
-
-  std::shared_ptr<GridMapGeo> map = std::make_shared<GridMapGeo>();
-  map->Load(file_path, false, color_path);
-
-  while (true) {
-    /// TODO: Publish gridmap
-    MapPublishOnce(original_map_pub, map->getGridMap());
-    ros::Duration(10.0).sleep();
-    ros::Duration(3.0).sleep();
-  }
-
-  ros::spin();
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<MapPublisher>());
+  rclcpp::shutdown();
   return 0;
 }
