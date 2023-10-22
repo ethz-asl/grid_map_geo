@@ -37,7 +37,7 @@
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
-#include "grid_map_geo/grid_map_geo.h"
+#include "grid_map_geo/grid_map_geo.hpp"
 
 #include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_core/iterators/CircleIterator.hpp>

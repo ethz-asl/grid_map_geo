@@ -34,7 +34,7 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
-#include "grid_map_geo/transform.h"
+#include "grid_map_geo/transform.hpp"
 
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
