@@ -38,6 +38,28 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} Eigen3::Eigen GDAL::GDAL grid_map_core::grid_map_core)
 
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(GDAL)
+
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
 include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(test)

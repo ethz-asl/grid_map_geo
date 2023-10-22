@@ -10,30 +10,22 @@ This package provides a georeferenced extension to the elevation map [grid_map](
 Affiliation: [ETH Zurich, Autonomous Systems Lab](https://asl.ethz.ch/)<br />**
 ## Setup
 Install the dependencies. This package depends on gdal, to read georeferenced images and GeoTIFF files.
-```
-apt install libgdal-dev
-```
-Configure the catkin workspace
-```
-catkin config --extend "/opt/ros/noetic"
-catkin config --merge-devel
-```
 
-Pull in dependencies using rosinstall / rosdep
+Pull in dependencies using rosdep
 ```
-wstool init src src/grid_map_geo/dependencies.rosinstall
-wstool update -t src -j4
+source /opt/ros/humble/setup.bash
 rosdep update
-rosdep install --from-paths src --ignore-src -y --rosdistro noetic
+# Assuming the package is cloned in the src folder of a ROS workspace...
+rosdep install --from-paths src --ignore-src -y
 ```
 
 Build the package
 ```
-catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False
-catkin build -j$(nproc) -l$(nproc) grid_map_geo
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False --packages-up-to grid_map_geo
 ```
 ## Running the package
 The default launch file can be run as the following command. 
 ```
-roslaunch grid_map_geo load_tif.launch
+source install/setup.bash
+ros2 launch grid_map_geo load_tif_launch.xml
 ```
