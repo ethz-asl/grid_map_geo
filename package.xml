@@ -18,6 +18,7 @@
   <depend>grid_map_ros</depend>
   <depend>libgdal-dev</depend>
   <depend>rclcpp</depend>
+  <depend>yaml_cpp_vendor</depend>
   <exec_depend>ros2launch</exec_depend>
 
   <export>

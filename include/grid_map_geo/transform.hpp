@@ -34,10 +34,17 @@
 #ifndef GRID_MAP_GEO_TRANSFORM_H
 #define GRID_MAP_GEO_TRANSFORM_H
 
+#if __APPLE__
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <ogr_p.h>
+#include <ogr_spatialref.h>
+#else
 #include <gdal/gdal.h>
 #include <gdal/gdal_priv.h>
 #include <gdal/ogr_p.h>
 #include <gdal/ogr_spatialref.h>
+#endif
 
 #include <Eigen/Dense>
 
