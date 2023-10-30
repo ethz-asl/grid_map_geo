@@ -37,7 +37,7 @@
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
-#include "grid_map_geo/grid_map_geo.h"
+#include "grid_map_geo/grid_map_geo.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -52,11 +52,8 @@ class MapPublisher : public rclcpp::Node {
     MapPublisher() : Node("map_publisher") {
       original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
-      this->declare_parameter("tif_path", ".");
-      this->declare_parameter("tif_color_path", ".");
-
-      std::string file_path = this->get_parameter("tif_path").as_string();
-      std::string color_path = this->get_parameter("tif_color_path").as_string();
+      std::string file_path = this->declare_parameter("tif_path", ".");
+      std::string color_path = this->declare_parameter("tif_color_path", ".");
 
       map_ = std::make_shared<GridMapGeo>();
       map_->Load(file_path, false, color_path);
@@ -68,13 +65,8 @@ class MapPublisher : public rclcpp::Node {
       original_map_pub_->publish(std::move(msg));
     }
     rclcpp::TimerBase::SharedPtr timer_;
-    size_t count_{0};
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
     std::shared_ptr<GridMapGeo> map_;
-  // void MapPublishOnce(ros::Publisher &pub, grid_map::GridMap &map) {
-  //   map.setTimestamp(ros::Time::now().toNSec());
-  //   pub.publish(message);
-  // }
 };
 
 int main(int argc, char **argv) {
