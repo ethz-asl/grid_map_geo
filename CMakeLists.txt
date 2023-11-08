@@ -44,7 +44,7 @@ target_include_directories(${PROJECT_NAME}
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
 
-target_link_libraries(${PROJECT_NAME} Eigen3::Eigen GDAL::GDAL)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen GDAL::GDAL)
 
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
   grid_map_core
@@ -55,7 +55,7 @@ add_executable(test_tif_loader
   src/test_tif_loader.cpp
 )
 
-target_link_libraries(test_tif_loader
+target_link_libraries(test_tif_loader PUBLIC
   ${PROJECT_NAME}
 )
 
@@ -69,26 +69,18 @@ install(
   TARGETS
   ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
-  ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  LIBRARY DESTINATION lib/${PROJECT_NAME}
-  RUNTIME DESTINATION bin/${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(GDAL)
 
-# NOTE: if RUNTIME DESTINATION is set to bin/${PROJECT_NAME} the executable
-# is not found by ros2 launch:
-# 
-# Caught exception in launch (see debug for traceback): executable
-# 'test_tif_loader' not found on the libexec directory 
-# '<ws_path>/ros2-aerial/install/grid_map_geo/lib/grid_map_geo'
 install(
   TARGETS
   test_tif_loader
-  ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  LIBRARY DESTINATION lib/${PROJECT_NAME}
-  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY
