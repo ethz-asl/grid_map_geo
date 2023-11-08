@@ -46,7 +46,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} Eigen3::Eigen GDAL::GDAL)
 
-ament_target_dependencies(${PROJECT_NAME} SYSTEM
+ament_target_dependencies(${PROJECT_NAME} PUBLIC
   grid_map_core
   grid_map_ros
 )
