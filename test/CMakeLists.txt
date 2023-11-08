@@ -7,6 +7,4 @@ ament_add_gtest(${PROJECT_NAME}-test
 
 target_link_libraries(${PROJECT_NAME}-test
   ${PROJECT_NAME}
-  # ${YAML_CPP_LIBRARIES}
-  # ${GDAL_LIBRARY}
 )
