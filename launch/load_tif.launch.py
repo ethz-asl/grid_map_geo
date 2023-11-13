@@ -46,7 +46,7 @@ def generate_launch_description():
     rviz = Node(
         package="rviz2",
         executable="rviz2",
-        arguments=["-d", os.path.join(pkg_grid_map_geo, "launch", "config.rviz")],
+        arguments=["-d", os.path.join(pkg_grid_map_geo, "rviz", "config.rviz")],
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
