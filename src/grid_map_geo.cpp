@@ -47,8 +47,8 @@ GridMapGeo::GridMapGeo() {}
 
 GridMapGeo::~GridMapGeo() {}
 
-bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std::string color_map_path) {
-  bool loaded = initializeFromGeotiff(map_path, algin_terrain);
+bool GridMapGeo::Load(const std::string &map_path, const std::string color_map_path) {
+  bool loaded = initializeFromGeotiff(map_path);
   if (!color_map_path.empty()) {  // Load color layer if the color path is nonempty
     bool color_loaded = addColorFromGeotiff(color_map_path);
   }
@@ -56,7 +56,7 @@ bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std
   return true;
 }
 
-bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terrain) {
+bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   GDALAllRegister();
   GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
   if (!dataset) {
@@ -98,21 +98,6 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
-
-  /// TODO: Generalize to set local origin as center of map position
-  // Eigen::Vector3d origin_lv03 =
-  //     transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
-  // localorigin_e_ = origin_lv03(0);
-  // localorigin_n_ = origin_lv03(1);
-  // localorigin_altitude_ = origin_lv03(2);
-  // if (align_terrain) {
-  //   std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
-  //   double map_position_x = mapcenter_e - localorigin_e_;
-  //   double map_position_y = mapcenter_n - localorigin_n_;
-  //   position = Eigen::Vector2d(map_position_x, map_position_y);
-  // } else {
-  //   std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
-  // }
 
   grid_map_.setGeometry(length, resolution, position);
   /// TODO: Use TF for geocoordinates
