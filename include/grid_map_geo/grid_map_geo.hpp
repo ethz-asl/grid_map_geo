@@ -177,6 +177,14 @@ class GridMapGeo {
    */
   bool AddLayerOffset(const double offset_distance, const std::string& layer_name);
 
+  /**
+   * @brief Compute normal vectors of the surface
+   *
+   * @param layer_name
+   * @param reference_layer
+   */
+  void AddLayerNormals(std::string reference_layer);
+
  protected:
   grid_map::GridMap grid_map_;
   double localorigin_e_{789823.93};  // duerrboden berghaus
