@@ -2,7 +2,8 @@ name: Build Test
 on:
   push:
     branches:
-    - 'master'
+    # - 'master'
+    - 'ros2'
   pull_request:
     branches:
     - '*'
@@ -14,8 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {rosdistro: 'melodic', container: 'px4io/px4-dev-ros-melodic:2021-12-11'}
-          - {rosdistro: 'noetic', container: 'px4io/px4-dev-ros-noetic:2021-12-11'}
+          - {rosdistro: 'humble', container: 'osrf/ros:humble-desktop'}
+          # - {rosdistro: 'melodic', container: 'px4io/px4-dev-ros-melodic:2021-12-11'}
+          # - {rosdistro: 'noetic', container: 'px4io/px4-dev-ros-noetic:2021-12-11'}
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v1
@@ -31,26 +33,22 @@ jobs:
     - name: Build Test
       working-directory: 
       run: |
-        mkdir -p $HOME/catkin_ws/src;
-        cd $HOME/catkin_ws
-        catkin init
-        catkin config --extend "/opt/ros/${{matrix.config.rosdistro}}"
-        catkin config --merge-devel
-        cd $HOME/catkin_ws/src
+        mkdir -p $HOME/ros2_ws/src;
+        cd $HOME/ros2_ws
+        cd $HOME/ros2_ws/src
         ln -s $GITHUB_WORKSPACE
-        cd $HOME/catkin_ws
-        wstool init src src/grid_map_geo/dependencies.rosinstall
-        wstool update -t src -j4
+        cd $HOME/ros2_ws
+        source /opt/ros/humble/setup.bash
         rosdep update
         rosdep install --from-paths src --ignore-src -y --rosdistro ${{matrix.config.rosdistro}}
-        catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False
-        catkin build -j$(nproc) -l$(nproc) grid_map_geo
-    - name: unit_tests
-      working-directory:
-      run: |
-        cd $HOME/catkin_ws/src
-        catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
-        catkin build grid_map_geo --no-deps -i --catkin-make-args tests
-        source $HOME/catkin_ws/devel/setup.bash
-        status=0 && for f in $HOME/catkin_ws/devel/lib/*/*-test; do $f || exit 1; done
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False --packages-up-to grid_map_geo
       shell: bash
+    # - name: unit_tests
+    #   working-directory:
+    #   run: |
+    #     cd $HOME/catkin_ws/src
+    #     catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
+    #     catkin build grid_map_geo --no-deps -i --catkin-make-args tests
+    #     source $HOME/catkin_ws/devel/setup.bash
+    #     status=0 && for f in $HOME/catkin_ws/devel/lib/*/*-test; do $f || exit 1; done
+    #   shell: bash

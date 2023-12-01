@@ -48,32 +48,32 @@
 using namespace std::chrono_literals;
 
 class MapPublisher : public rclcpp::Node {
-  public:
-    MapPublisher() : Node("map_publisher") {
-      original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
+ public:
+  MapPublisher() : Node("map_publisher") {
+    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
-      std::string file_path = this->declare_parameter("tif_path", ".");
-      std::string color_path = this->declare_parameter("tif_color_path", ".");
+    std::string file_path = this->declare_parameter("tif_path", ".");
+    std::string color_path = this->declare_parameter("tif_color_path", ".");
 
-      RCLCPP_INFO_STREAM(get_logger(), "file_path " << file_path);
-      RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
+    RCLCPP_INFO_STREAM(get_logger(), "file_path " << file_path);
+    RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
 
-      map_ = std::make_shared<GridMapGeo>();
-      map_->Load(file_path, false, color_path);
-      timer_ = this->create_wall_timer(5s, std::bind(&MapPublisher::timer_callback, this));
-    }
-  private:
-    void timer_callback() {
-      auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
-      original_map_pub_->publish(std::move(msg));
-    }
-    rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
-    std::shared_ptr<GridMapGeo> map_;
+    map_ = std::make_shared<GridMapGeo>();
+    map_->Load(file_path, false, color_path);
+    timer_ = this->create_wall_timer(5s, std::bind(&MapPublisher::timer_callback, this));
+  }
+
+ private:
+  void timer_callback() {
+    auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
+    original_map_pub_->publish(std::move(msg));
+  }
+  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
+  std::shared_ptr<GridMapGeo> map_;
 };
 
 int main(int argc, char **argv) {
-
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<MapPublisher>());
   rclcpp::shutdown();
