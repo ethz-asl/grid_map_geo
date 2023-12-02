@@ -43,7 +43,9 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-GridMapGeo::GridMapGeo() {}
+GridMapGeo::GridMapGeo(const std::string frame_id) {
+  frame_id_ = frame_id;
+}
 
 GridMapGeo::~GridMapGeo() {}
 
@@ -101,7 +103,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
 
   grid_map_.setGeometry(length, resolution, position);
   /// TODO: Use TF for geocoordinates
-  grid_map_.setFrameId("map");
+  grid_map_.setFrameId(frame_id_);
   grid_map_.add("elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
 

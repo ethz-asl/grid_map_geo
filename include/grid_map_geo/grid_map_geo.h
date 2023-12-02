@@ -52,7 +52,7 @@ struct Location {
 
 class GridMapGeo {
  public:
-  GridMapGeo();
+  GridMapGeo(const std::string frame_id = "map");
   virtual ~GridMapGeo();
 
   /**
@@ -170,5 +170,6 @@ class GridMapGeo {
  protected:
   grid_map::GridMap grid_map_;
   Location maporigin_;
+  std::string frame_id_{""};
 };
 #endif
