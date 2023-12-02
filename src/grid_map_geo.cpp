@@ -83,6 +83,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   const char *pszProjection = dataset->GetProjectionRef();
   std::cout << std::endl << "Wkt ProjectionRef: " << pszProjection << std::endl;
 
+  const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
+  std::string name_coordinate = spatial_ref->GetAttrValue("geogcs");
   // Get image metadata
   unsigned width = dataset->GetRasterXSize();
   unsigned height = dataset->GetRasterYSize();
@@ -125,15 +127,15 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   geometry_msgs::TransformStamped static_transformStamped;
 
   static_transformStamped.header.stamp = ros::Time::now();
-  static_transformStamped.header.frame_id = "UTM";
+  static_transformStamped.header.frame_id = name_coordinate;
   static_transformStamped.child_frame_id = frame_id_;
-  static_transformStamped.transform.translation.x = 0.0;
-  static_transformStamped.transform.translation.y = 0.0;
+  static_transformStamped.transform.translation.x = mapcenter_e;
+  static_transformStamped.transform.translation.y = mapcenter_n;
   static_transformStamped.transform.translation.z = 0.0;
   static_transformStamped.transform.rotation.x = 0.0;
   static_transformStamped.transform.rotation.y = 0.0;
   static_transformStamped.transform.rotation.z = 0.0;
-  static_transformStamped.transform.rotation.w = 0.0;
+  static_transformStamped.transform.rotation.w = 1.0;
   static_broadcaster.sendTransform(static_transformStamped);
 
   return true;
