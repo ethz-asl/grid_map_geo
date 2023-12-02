@@ -43,9 +43,10 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-GridMapGeo::GridMapGeo(const std::string frame_id) {
-  frame_id_ = frame_id;
-}
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
+GridMapGeo::GridMapGeo(const std::string frame_id) { frame_id_ = frame_id; }
 
 GridMapGeo::~GridMapGeo() {}
 
@@ -120,17 +121,21 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
     layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
   }
 
-  /// TODO: This is a workaround with the problem of gdal 3 not translating altitude correctly.
-  /// This section just levels the current position to the ground
-  double altitude{0.0};
-  if (grid_map_.isInside(Eigen::Vector2d(0.0, 0.0))) {
-    altitude = grid_map_.atPosition("elevation", Eigen::Vector2d(0.0, 0.0));
-  }
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+  geometry_msgs::TransformStamped static_transformStamped;
 
-  // Eigen::Translation3d meshlab_translation(0.0, 0.0, -altitude);
-  // Eigen::AngleAxisd meshlab_rotation(Eigen::AngleAxisd::Identity());
-  // Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
-  // grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
+  static_transformStamped.header.stamp = ros::Time::now();
+  static_transformStamped.header.frame_id = "UTM";
+  static_transformStamped.child_frame_id = frame_id_;
+  static_transformStamped.transform.translation.x = 0.0;
+  static_transformStamped.transform.translation.y = 0.0;
+  static_transformStamped.transform.translation.z = 0.0;
+  static_transformStamped.transform.rotation.x = 0.0;
+  static_transformStamped.transform.rotation.y = 0.0;
+  static_transformStamped.transform.rotation.z = 0.0;
+  static_transformStamped.transform.rotation.w = 0.0;
+  static_broadcaster.sendTransform(static_transformStamped);
+
   return true;
 }
 
