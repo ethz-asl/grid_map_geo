@@ -2,7 +2,6 @@ name: Build Test
 on:
   push:
     branches:
-    # - 'master'
     - 'ros2'
   pull_request:
     branches:
@@ -16,8 +15,6 @@ jobs:
       matrix:
         config:
           - {rosdistro: 'humble', container: 'osrf/ros:humble-desktop'}
-          # - {rosdistro: 'melodic', container: 'px4io/px4-dev-ros-melodic:2021-12-11'}
-          # - {rosdistro: 'noetic', container: 'px4io/px4-dev-ros-noetic:2021-12-11'}
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v1
@@ -34,14 +31,13 @@ jobs:
       working-directory: 
       run: |
         mkdir -p $HOME/ros2_ws/src;
-        cd $HOME/ros2_ws
         cd $HOME/ros2_ws/src
         ln -s $GITHUB_WORKSPACE
         cd $HOME/ros2_ws
         source /opt/ros/humble/setup.bash
         rosdep update
         rosdep install --from-paths src --ignore-src -y --rosdistro ${{matrix.config.rosdistro}}
-        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False --packages-up-to grid_map_geo
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
       shell: bash
     # - name: unit_tests
     #   working-directory:
