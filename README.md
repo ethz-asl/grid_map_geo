@@ -21,7 +21,7 @@ rosdep install --from-paths src --ignore-src -y
 
 Build the package
 ```
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=False --packages-up-to grid_map_geo
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
 ```
 ## Running the package
 The default launch file can be run as the following command. 
