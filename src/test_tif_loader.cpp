@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   nh_private.param<std::string>("color_path", color_path, "");
 
   std::shared_ptr<GridMapGeo> map = std::make_shared<GridMapGeo>();
-  map->Load(file_path, false, color_path);
+  map->Load(file_path, color_path);
 
   while (true) {
     /// TODO: Publish gridmap
