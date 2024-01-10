@@ -14,10 +14,10 @@ Affiliation: [ETH Zurich, Autonomous Systems Lab](https://asl.ethz.ch/)<br />**
 
 ## Setup
 
-Install the dependencies. This package depends on gdal, to read georeferenced images and GeoTIFF files.
+Install the dependencies. This package depends on GDAL, to read georeferenced images and DEM files.
 
 Pull in dependencies using rosdep
-```
+```bash
 source /opt/ros/humble/setup.bash
 rosdep update
 # Assuming the package is cloned in the src folder of a ROS workspace...
@@ -25,6 +25,9 @@ rosdep install --from-paths src --ignore-src -y
 ```
 
 Build the package
+
+```bash
+colcon build --mixin release --packages-up-to grid_map_geo
 ```
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
 ```
@@ -67,8 +70,44 @@ ros2 launch grid_map_geo load_tif_launch.xml
 ## Running the package
 
 The default launch file can be run as the following command. 
-```
+```bash
 source install/setup.bash
 ros2 launch grid_map_geo load_tif_launch.xml
 ```
 
+To debug the map publisher in GDB:
+
+```bash
+colcon build --mixin debug --packages-up-to grid_map_geo --symlink-install
+source install/setup.bash
+
+# To debug the node under GDB
+ros2 run --prefix 'gdb -ex run --args' \
+grid_map_geo map_publisher --ros-args \
+-p gdal_dataset_path:=install/grid_map_geo/share/grid_map_geo/resources/ap_srtm1.vrt
+
+# To debug from the launch file
+ros2 launch grid_map_geo load_vrt_launch.xml
+```
+
+**Note:** `grid_map_geo` uses asserts to catch coding errors; they are enabled by default when 
+building in debug mode, and removed from release mode.
+
+## Mixing data from different datums, resolutions, and raster sizes
+
+`grid_map_geo` does not yet support automatically overlaying color data over elevation data from 
+different sources. Currently, color data must be the same datum, resolution and size for both the 
+DEM raster and the color raster.
+
+As an example, `sertig_color.tif` color data can be requested loaded on the SRTM1 DEM at sertig:
+
+```bash
+ros2 launch grid_map_geo load_tif.launch.py params_file:=config/sargans_color_over_srtm1.yaml
+# OR 
+ros2 run --prefix 'gdb -ex run --args' grid_map_geo map_publisher --ros-args --params-file config/sargans_color_over_srtm1.yaml
+```
+
+These datasets are different sizes, different resultions, and use different datums.
+
+Either of these ways of launching cause a floating point crash in `grid_map::getIndexFromLinearIndex`. 
+This limitation may be addressed in a future version.
