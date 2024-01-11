@@ -44,6 +44,7 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #if __APPLE__
 #include <cpl_string.h>
 #include <gdal.h>
@@ -60,10 +61,12 @@
 
 GridMapGeo::GridMapGeo() {}
 
+GridMapGeo::GridMapGeo(const std::string frame_id) { frame_id_ = frame_id; }
+
 GridMapGeo::~GridMapGeo() {}
 
-bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std::string color_map_path) {
-  bool loaded = initializeFromGeotiff(map_path, algin_terrain);
+bool GridMapGeo::Load(const std::string &map_path, const std::string color_map_path) {
+  bool loaded = initializeFromGeotiff(map_path);
   if (!color_map_path.empty()) {  // Load color layer if the color path is nonempty
     bool color_loaded = addColorFromGeotiff(color_map_path);
   }
@@ -71,7 +74,7 @@ bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std
   return true;
 }
 
-bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terrain) {
+bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   GDALAllRegister();
   const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
@@ -102,6 +105,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
 
   std::cout << std::endl << "Wkt ProjectionRef: " << pszProjection << std::endl;
 
+  const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
+  std::string name_coordinate = spatial_ref->GetAttrValue("geogcs");
   // Get image metadata
   unsigned width = dataset->GetRasterXSize();
   unsigned height = dataset->GetRasterYSize();
@@ -119,26 +124,21 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   maporigin_.espg = ESPG::CH1903_LV03;
   maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
 
-  Eigen::Vector2d position{Eigen::Vector2d::Zero()};
+  static_transformStamped.header.frame_id = name_coordinate;
+  static_transformStamped.child_frame_id = frame_id_;
+  static_transformStamped.transform.translation.x = mapcenter_e;
+  static_transformStamped.transform.translation.y = mapcenter_n;
+  static_transformStamped.transform.translation.z = 0.0;
+  static_transformStamped.transform.rotation.x = 0.0;
+  static_transformStamped.transform.rotation.y = 0.0;
+  static_transformStamped.transform.rotation.z = 0.0;
+  static_transformStamped.transform.rotation.w = 1.0;
 
-  /// TODO: Generalize to set local origin as center of map position
-  // Eigen::Vector3d origin_lv03 =
-  //     transformCoordinates(ESPG::WGS84, std::string(pszProjection), localorigin_wgs84_.position);
-  // localorigin_e_ = origin_lv03(0);
-  // localorigin_n_ = origin_lv03(1);
-  // localorigin_altitude_ = origin_lv03(2);
-  // if (align_terrain) {
-  //   std::cout << "[GridMapGeo] Aligning terrain!" << std::endl;
-  //   double map_position_x = mapcenter_e - localorigin_e_;
-  //   double map_position_y = mapcenter_n - localorigin_n_;
-  //   position = Eigen::Vector2d(map_position_x, map_position_y);
-  // } else {
-  //   std::cout << "[GridMapGeo] Not aligning terrain!" << std::endl;
-  // }
+  Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
   grid_map_.setGeometry(length, resolution, position);
   /// TODO: Use TF for geocoordinates
-  grid_map_.setFrameId("map");
+  grid_map_.setFrameId(frame_id_);
   grid_map_.add("elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
 
@@ -155,17 +155,6 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
     layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
   }
 
-  /// TODO: This is a workaround with the problem of gdal 3 not translating altitude correctly.
-  /// This section just levels the current position to the ground
-  double altitude{0.0};
-  if (grid_map_.isInside(Eigen::Vector2d(0.0, 0.0))) {
-    altitude = grid_map_.atPosition("elevation", Eigen::Vector2d(0.0, 0.0));
-  }
-
-  // Eigen::Translation3d meshlab_translation(0.0, 0.0, -altitude);
-  // Eigen::AngleAxisd meshlab_rotation(Eigen::AngleAxisd::Identity());
-  // Eigen::Isometry3d transform = meshlab_translation * meshlab_rotation;  // Apply affine transformation.
-  // grid_map_ = grid_map_.getTransformedMap(transform, "elevation", grid_map_.getFrameId(), true);
   return true;
 }
 

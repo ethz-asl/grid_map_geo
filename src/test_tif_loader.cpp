@@ -50,10 +50,12 @@ using namespace std::chrono_literals;
 class MapPublisher : public rclcpp::Node {
  public:
   MapPublisher() : Node("map_publisher") {
-    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
     std::string file_path = this->declare_parameter("tif_path", ".");
-    std::string color_path = this->declare_parameter("tif_color_path", "");
+    std::string frame_id = this->declare_parameter("frame_id", "map");
+    std::string topic_name = this->declare_parameter("topic_name", "elevation_map");
+
+    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(topic_name, 1);
 
     RCLCPP_INFO_STREAM(get_logger(), "file_path " << file_path);
     RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
@@ -74,6 +76,7 @@ class MapPublisher : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
   std::shared_ptr<GridMapGeo> map_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 
 int main(int argc, char **argv) {
