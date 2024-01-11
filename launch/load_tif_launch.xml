@@ -9,6 +9,6 @@
     </node>
 
     <group if="$(var rviz)">
-        <node exec="rviz2" name="rviz2" pkg="rviz2"  args="-d $(find-pkg-share grid_map_geo)/launch/config.rviz" />
+        <node exec="rviz2" name="rviz2" pkg="rviz2"  args="-d $(find-pkg-share grid_map_geo)/rviz/config.rviz" />
     </group>
 </launch>
