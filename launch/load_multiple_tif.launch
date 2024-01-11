@@ -3,10 +3,17 @@
     <arg name="location" default="sargans"/>
     <node pkg="tf" type="static_transform_publisher" name="world_map" args="0 0 0 0 0 0 world map 10"/>
 
-    <node pkg="grid_map_geo" type="test_tif_loader" name="test_tif_loader" output="screen">
+    <node pkg="grid_map_geo" type="test_tif_loader" name="first_tif_loader" output="screen">
         <param name="frame_id" value="map"/>
         <param name="tif_path" value="$(find grid_map_geo)/resources/sertig.tif"/>
         <!-- <param name="color_path" value="$(find grid_map_geo)/resources/sertig_color.tif"/> -->
+    </node>
+
+    <node pkg="grid_map_geo" type="test_tif_loader" name="second_tif_loader2" output="screen">
+        <param name="frame_id" value="dischma_valley"/>
+        <param name="tif_path" value="$(find terrain_models)/models/dischma_valley.tif"/>
+        <param name="color_path" value="$(find terrain_models)/models/dischma_valley_color.tif"/>
+        <param name="topic_name" value="elevation2"/>
     </node>
 
     <group if="$(arg visualization)">
