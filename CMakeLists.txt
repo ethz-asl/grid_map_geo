@@ -93,6 +93,11 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/
 )
 
+install(DIRECTORY
+  resources
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 # Test
 include(CTest)
 if(BUILD_TESTING)
