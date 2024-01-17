@@ -60,15 +60,17 @@ class MapPublisher : public rclcpp::Node {
 
     map_ = std::make_shared<GridMapGeo>();
     map_->Load(file_path, false, color_path);
-    timer_ = this->create_wall_timer(5s, std::bind(&MapPublisher::timer_callback, this));
+    auto timer_callback = [this]() -> void {
+      auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
+      if (msg) {
+        msg->header.stamp = now();
+        original_map_pub_->publish(std::move(msg));
+      }
+    };
+    timer_ = this->create_wall_timer(5s, timer_callback);
   }
 
  private:
-  void timer_callback() {
-    auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
-    msg->header.stamp = now();
-    original_map_pub_->publish(std::move(msg));
-  }
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
   std::shared_ptr<GridMapGeo> map_;
