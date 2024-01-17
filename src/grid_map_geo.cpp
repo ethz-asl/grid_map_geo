@@ -78,6 +78,13 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   }
 
   const char *pszProjection = dataset->GetProjectionRef();
+
+  if (strlen(pszProjection) == 0) {
+    // https://gdal.org/user/raster_data_model.html#coordinate-system
+    std::cerr << std::endl << "Wkt ProjectionRef is unknown!" << std::endl;
+    return false;
+  }
+
   std::cout << std::endl << "Wkt ProjectionRef: " << pszProjection << std::endl;
 
   // Get image metadata
