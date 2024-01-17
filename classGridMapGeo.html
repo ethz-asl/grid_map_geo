@@ -71,6 +71,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classGridMapGeo-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">GridMapGeo Class Reference</div></div>
@@ -79,9 +80,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a7a34e4aa8042cd9789aad08ff154c048"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a7a34e4aa8042cd9789aad08ff154c048">GridMapGeo</a> ()</td></tr>
-<tr class="memdesc:a7a34e4aa8042cd9789aad08ff154c048"><td class="mdescLeft">&#160;</td><td class="mdescRight">Terain map representation.  <a href="classGridMapGeo.html#a7a34e4aa8042cd9789aad08ff154c048">More...</a><br /></td></tr>
-<tr class="separator:a7a34e4aa8042cd9789aad08ff154c048"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a55981401f0ba6681ed5179c3ffaa2a8d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a55981401f0ba6681ed5179c3ffaa2a8d">GridMapGeo</a> (const std::string frame_id=&quot;map&quot;)</td></tr>
+<tr class="memdesc:a55981401f0ba6681ed5179c3ffaa2a8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Terain map representation.  <a href="classGridMapGeo.html#a55981401f0ba6681ed5179c3ffaa2a8d">More...</a><br /></td></tr>
+<tr class="separator:a55981401f0ba6681ed5179c3ffaa2a8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9fd61121682987e2b951e589a63f56c8"><td class="memItemLeft" align="right" valign="top">grid_map::GridMap &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a9fd61121682987e2b951e589a63f56c8">getGridMap</a> ()</td></tr>
 <tr class="memdesc:a9fd61121682987e2b951e589a63f56c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Grid Map object.  <a href="classGridMapGeo.html#a9fd61121682987e2b951e589a63f56c8">More...</a><br /></td></tr>
 <tr class="separator:a9fd61121682987e2b951e589a63f56c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -94,15 +95,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:adc977cd9c5d58b18301e3d11c416cf4a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#adc977cd9c5d58b18301e3d11c416cf4a">getGlobalOrigin</a> (ESPG &amp;src_coord, Eigen::Vector3d &amp;origin)</td></tr>
 <tr class="memdesc:adc977cd9c5d58b18301e3d11c416cf4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Global Origin object.  <a href="classGridMapGeo.html#adc977cd9c5d58b18301e3d11c416cf4a">More...</a><br /></td></tr>
 <tr class="separator:adc977cd9c5d58b18301e3d11c416cf4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7a5171043c855ee7fde3a4c4caabb292"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a7a5171043c855ee7fde3a4c4caabb292">setAltitudeOrigin</a> (const double altitude)</td></tr>
-<tr class="memdesc:a7a5171043c855ee7fde3a4c4caabb292"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the Altitude Origin object.  <a href="classGridMapGeo.html#a7a5171043c855ee7fde3a4c4caabb292">More...</a><br /></td></tr>
-<tr class="separator:a7a5171043c855ee7fde3a4c4caabb292"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a168c6c821aa3f45ad366976d6dd8667a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a168c6c821aa3f45ad366976d6dd8667a">Load</a> (const std::string &amp;map_path, bool algin_terrain, const std::string color_map_path=&quot;&quot;)</td></tr>
-<tr class="memdesc:a168c6c821aa3f45ad366976d6dd8667a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for loading terrain from path.  <a href="classGridMapGeo.html#a168c6c821aa3f45ad366976d6dd8667a">More...</a><br /></td></tr>
-<tr class="separator:a168c6c821aa3f45ad366976d6dd8667a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ec8e17412bdb7eb069a239e682a77a9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a7ec8e17412bdb7eb069a239e682a77a9">initializeFromGeotiff</a> (const std::string &amp;path, bool align_terrain=true)</td></tr>
-<tr class="memdesc:a7ec8e17412bdb7eb069a239e682a77a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize grid map from a geotiff file.  <a href="classGridMapGeo.html#a7ec8e17412bdb7eb069a239e682a77a9">More...</a><br /></td></tr>
-<tr class="separator:a7ec8e17412bdb7eb069a239e682a77a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">Load</a> (const std::string &amp;map_path, const std::string color_map_path=&quot;&quot;)</td></tr>
+<tr class="memdesc:a9f7825054a3e59f6a7fdd78d95c52699"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for loading terrain from path.  <a href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">More...</a><br /></td></tr>
+<tr class="separator:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b9d31af6e78c48d0c2986453418fafa"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a4b9d31af6e78c48d0c2986453418fafa">initializeFromGeotiff</a> (const std::string &amp;path)</td></tr>
+<tr class="memdesc:a4b9d31af6e78c48d0c2986453418fafa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize grid map from a geotiff file.  <a href="classGridMapGeo.html#a4b9d31af6e78c48d0c2986453418fafa">More...</a><br /></td></tr>
+<tr class="separator:a4b9d31af6e78c48d0c2986453418fafa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acaa8a9b084083788819730d39259b587"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#acaa8a9b084083788819730d39259b587">addColorFromGeotiff</a> (const std::string &amp;path)</td></tr>
 <tr class="memdesc:acaa8a9b084083788819730d39259b587"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load a color layer from a geotiff file (orthomosaic)  <a href="classGridMapGeo.html#acaa8a9b084083788819730d39259b587">More...</a><br /></td></tr>
 <tr class="separator:acaa8a9b084083788819730d39259b587"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -122,27 +120,27 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:af742ba4879bc361fa090cbcaf5fd6ed9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute normal vectors of the surface.  <a href="classGridMapGeo.html#af742ba4879bc361fa090cbcaf5fd6ed9">More...</a><br /></td></tr>
 <tr class="separator:af742ba4879bc361fa090cbcaf5fd6ed9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a469c5eee096e30f9cc6bf6cb0a855a15"><td class="memItemLeft" align="right" valign="top"><a id="a469c5eee096e30f9cc6bf6cb0a855a15" name="a469c5eee096e30f9cc6bf6cb0a855a15"></a>
+geometry_msgs::msg::TransformStamped&#160;</td><td class="memItemRight" valign="bottom"><b>static_transformStamped</b></td></tr>
+<tr class="separator:a469c5eee096e30f9cc6bf6cb0a855a15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
 <tr class="memitem:af6cc4d667bf83a71abbaceba8f23bb92"><td class="memItemLeft" align="right" valign="top"><a id="af6cc4d667bf83a71abbaceba8f23bb92" name="af6cc4d667bf83a71abbaceba8f23bb92"></a>
 grid_map::GridMap&#160;</td><td class="memItemRight" valign="bottom"><b>grid_map_</b></td></tr>
 <tr class="separator:af6cc4d667bf83a71abbaceba8f23bb92"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a44e6ec7e6fa56d5ef9547c4d82242bbf"><td class="memItemLeft" align="right" valign="top"><a id="a44e6ec7e6fa56d5ef9547c4d82242bbf" name="a44e6ec7e6fa56d5ef9547c4d82242bbf"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>localorigin_e_</b> {789823.93}</td></tr>
-<tr class="separator:a44e6ec7e6fa56d5ef9547c4d82242bbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a434b79d0af55f26cc7da94ac85344917"><td class="memItemLeft" align="right" valign="top"><a id="a434b79d0af55f26cc7da94ac85344917" name="a434b79d0af55f26cc7da94ac85344917"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>localorigin_n_</b> {177416.56}</td></tr>
-<tr class="separator:a434b79d0af55f26cc7da94ac85344917"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16959411dccb4a3ebb74e6d6b733f9dd"><td class="memItemLeft" align="right" valign="top"><a id="a16959411dccb4a3ebb74e6d6b733f9dd" name="a16959411dccb4a3ebb74e6d6b733f9dd"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>localorigin_altitude_</b> {0.0}</td></tr>
-<tr class="separator:a16959411dccb4a3ebb74e6d6b733f9dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaaf36b3990a2f8f62265c6d682087741"><td class="memItemLeft" align="right" valign="top"><a id="aaaf36b3990a2f8f62265c6d682087741" name="aaaf36b3990a2f8f62265c6d682087741"></a>
 <a class="el" href="structLocation.html">Location</a>&#160;</td><td class="memItemRight" valign="bottom"><b>maporigin_</b></td></tr>
 <tr class="separator:aaaf36b3990a2f8f62265c6d682087741"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa15c520a7c6ea636ac23e1ef683bbae3"><td class="memItemLeft" align="right" valign="top"><a id="aa15c520a7c6ea636ac23e1ef683bbae3" name="aa15c520a7c6ea636ac23e1ef683bbae3"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>frame_id_</b> {&quot;&quot;}</td></tr>
+<tr class="separator:aa15c520a7c6ea636ac23e1ef683bbae3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a7a34e4aa8042cd9789aad08ff154c048" name="a7a34e4aa8042cd9789aad08ff154c048"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7a34e4aa8042cd9789aad08ff154c048">&#9670;&#160;</a></span>GridMapGeo()</h2>
+<a id="a55981401f0ba6681ed5179c3ffaa2a8d" name="a55981401f0ba6681ed5179c3ffaa2a8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a55981401f0ba6681ed5179c3ffaa2a8d">&#9670;&#160;</a></span>GridMapGeo()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -150,7 +148,8 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>localorigin_altitud
         <tr>
           <td class="memname">GridMapGeo::GridMapGeo </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">const std::string&#160;</td>
+          <td class="paramname"><em>frame_id</em> = <code>&quot;map&quot;</code></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -465,8 +464,8 @@ false </dd></dl>
 
 </div>
 </div>
-<a id="a7ec8e17412bdb7eb069a239e682a77a9" name="a7ec8e17412bdb7eb069a239e682a77a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7ec8e17412bdb7eb069a239e682a77a9">&#9670;&#160;</a></span>initializeFromGeotiff()</h2>
+<a id="a4b9d31af6e78c48d0c2986453418fafa" name="a4b9d31af6e78c48d0c2986453418fafa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b9d31af6e78c48d0c2986453418fafa">&#9670;&#160;</a></span>initializeFromGeotiff()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -475,18 +474,8 @@ false </dd></dl>
           <td class="memname">bool GridMapGeo::initializeFromGeotiff </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>path</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramname"><em>path</em></td><td>)</td>
           <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>align_terrain</em> = <code>true</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -495,21 +484,18 @@ false </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">path</td><td>Path to dsm path (Supported formats are *.tif) </td></tr>
-    <tr><td class="paramname">align_terrain</td><td></td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true Successfully loaded terrain </dd>
 <dd>
 false Failed to load terrain </dd></dl>
-<p >TODO: Generalize to set local origin as center of map position</p>
 <p >TODO: Use TF for geocoordinates</p>
-<p >TODO: This is a workaround with the problem of gdal 3 not translating altitude correctly. This section just levels the current position to the ground</p>
 
 </div>
 </div>
-<a id="a168c6c821aa3f45ad366976d6dd8667a" name="a168c6c821aa3f45ad366976d6dd8667a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a168c6c821aa3f45ad366976d6dd8667a">&#9670;&#160;</a></span>Load()</h2>
+<a id="a9f7825054a3e59f6a7fdd78d95c52699" name="a9f7825054a3e59f6a7fdd78d95c52699"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f7825054a3e59f6a7fdd78d95c52699">&#9670;&#160;</a></span>Load()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -519,12 +505,6 @@ false Failed to load terrain </dd></dl>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>map_path</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>algin_terrain</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -544,7 +524,6 @@ false Failed to load terrain </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">map_path</td><td>Path to dsm path (Supported formats are *.tif) </td></tr>
-    <tr><td class="paramname">algin_terrain</td><td>Geo align terrain </td></tr>
     <tr><td class="paramname">color_map_path</td><td>Path to color raster files to visualize terrain texture (Supported formats are *.tif) </td></tr>
   </table>
   </dd>
@@ -552,40 +531,6 @@ false Failed to load terrain </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>true Successfully loaded terrain </dd>
 <dd>
 false Failed to load terrain </dd></dl>
-
-</div>
-</div>
-<a id="a7a5171043c855ee7fde3a4c4caabb292" name="a7a5171043c855ee7fde3a4c4caabb292"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7a5171043c855ee7fde3a4c4caabb292">&#9670;&#160;</a></span>setAltitudeOrigin()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void GridMapGeo::setAltitudeOrigin </td>
-          <td>(</td>
-          <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>altitude</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Set the Altitude Origin object. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">altitude</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
 
 </div>
 </div>
