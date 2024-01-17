@@ -58,7 +58,7 @@ bool GridMapGeo::Load(const std::string &map_path, bool algin_terrain, const std
 
 bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terrain) {
   GDALAllRegister();
-  GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
+  const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
     std::cout << "Failed to open" << std::endl;
     return false;
@@ -149,7 +149,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
 
 bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   GDALAllRegister();
-  GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
+  const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
     std::cout << "Failed to open" << std::endl;
     return false;
@@ -210,7 +210,7 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
 
 bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::string &path) {
   GDALAllRegister();
-  GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
+  const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
     std::cout << "Failed to open" << std::endl;
     return false;
