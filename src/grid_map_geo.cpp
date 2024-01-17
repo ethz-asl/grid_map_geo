@@ -44,7 +44,6 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-#include "geometry_msgs/msg/transform_stamped.hpp"
 #if __APPLE__
 #include <cpl_string.h>
 #include <gdal.h>
@@ -58,8 +57,6 @@
 #include <gdal/ogr_p.h>
 #include <gdal/ogr_spatialref.h>
 #endif
-
-GridMapGeo::GridMapGeo() {}
 
 GridMapGeo::GridMapGeo(const std::string frame_id) { frame_id_ = frame_id; }
 
@@ -124,20 +121,9 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   maporigin_.espg = ESPG::CH1903_LV03;
   maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
 
-  static_transformStamped.header.frame_id = name_coordinate;
-  static_transformStamped.child_frame_id = frame_id_;
-  static_transformStamped.transform.translation.x = mapcenter_e;
-  static_transformStamped.transform.translation.y = mapcenter_n;
-  static_transformStamped.transform.translation.z = 0.0;
-  static_transformStamped.transform.rotation.x = 0.0;
-  static_transformStamped.transform.rotation.y = 0.0;
-  static_transformStamped.transform.rotation.z = 0.0;
-  static_transformStamped.transform.rotation.w = 1.0;
-
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
   grid_map_.setGeometry(length, resolution, position);
-  /// TODO: Use TF for geocoordinates
   grid_map_.setFrameId(frame_id_);
   grid_map_.add("elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
