@@ -44,6 +44,20 @@
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
+#if __APPLE__
+#include <cpl_string.h>
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <ogr_p.h>
+#include <ogr_spatialref.h>
+#else
+#include <gdal/cpl_string.h>
+#include <gdal/gdal.h>
+#include <gdal/gdal_priv.h>
+#include <gdal/ogr_p.h>
+#include <gdal/ogr_spatialref.h>
+#endif
+
 GridMapGeo::GridMapGeo() {}
 
 GridMapGeo::~GridMapGeo() {}

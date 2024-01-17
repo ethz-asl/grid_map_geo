@@ -44,7 +44,7 @@ target_include_directories(${PROJECT_NAME}
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen GDAL::GDAL)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen PRIVATE GDAL::GDAL)
 
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
   grid_map_core
