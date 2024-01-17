@@ -39,6 +39,7 @@
 
 #include "grid_map_geo/grid_map_geo.hpp"
 
+#include <array>
 #include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
@@ -66,8 +67,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path, bool align_terra
   std::cout << std::endl << "Loading GeoTIFF file for gridmap" << std::endl;
 
   double originX, originY, pixelSizeX, pixelSizeY;
-  double geoTransform[6];
-  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+  std::array<double, 6> geoTransform;
+  if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
     originX = geoTransform[0];
     originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
@@ -164,8 +165,8 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   std::cout << std::endl << "Loading color layer from GeoTIFF file for gridmap" << std::endl;
 
   double originX, originY, pixelSizeX, pixelSizeY;
-  double geoTransform[6];
-  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+  std::array<double, 6> geoTransform;
+  if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
     originX = geoTransform[0];
     originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
@@ -225,8 +226,8 @@ bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::s
   std::cout << std::endl << "Loading color layer from GeoTIFF file for gridmap" << std::endl;
 
   double originX, originY, pixelSizeX, pixelSizeY;
-  double geoTransform[6];
-  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+  std::array<double, 6> geoTransform;
+  if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
     originX = geoTransform[0];
     originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
