@@ -98,9 +98,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#ae77a5f02d46e9adc11b2a1507571f1b0">getCoordinateName</a> ()</td></tr>
 <tr class="memdesc:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the name of the coordinate frame of the dataset.  <a href="classGridMapGeo.html#ae77a5f02d46e9adc11b2a1507571f1b0">More...</a><br /></td></tr>
 <tr class="separator:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">Load</a> (const std::string &amp;map_path, const std::string color_map_path=&quot;&quot;)</td></tr>
-<tr class="memdesc:a9f7825054a3e59f6a7fdd78d95c52699"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for loading terrain from path.  <a href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">More...</a><br /></td></tr>
-<tr class="separator:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3950bebf26d4a84502e8d43c04b352f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#aa3950bebf26d4a84502e8d43c04b352f">Load</a> (const std:;string &amp;map_path)</td></tr>
+<tr class="memdesc:aa3950bebf26d4a84502e8d43c04b352f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overloading terrain loading with only elevation.  <a href="classGridMapGeo.html#aa3950bebf26d4a84502e8d43c04b352f">More...</a><br /></td></tr>
+<tr class="separator:aa3950bebf26d4a84502e8d43c04b352f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96a2da9503ad94e6418a3ee13a5cbad1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a96a2da9503ad94e6418a3ee13a5cbad1">Load</a> (const std::string &amp;map_path, const std::string &amp;color_map_path)</td></tr>
+<tr class="memdesc:a96a2da9503ad94e6418a3ee13a5cbad1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for loading terrain from path.  <a href="classGridMapGeo.html#a96a2da9503ad94e6418a3ee13a5cbad1">More...</a><br /></td></tr>
+<tr class="separator:a96a2da9503ad94e6418a3ee13a5cbad1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b9d31af6e78c48d0c2986453418fafa"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a4b9d31af6e78c48d0c2986453418fafa">initializeFromGeotiff</a> (const std::string &amp;path)</td></tr>
 <tr class="memdesc:a4b9d31af6e78c48d0c2986453418fafa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize grid map from a geotiff file.  <a href="classGridMapGeo.html#a4b9d31af6e78c48d0c2986453418fafa">More...</a><br /></td></tr>
 <tr class="separator:a4b9d31af6e78c48d0c2986453418fafa"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -125,9 +128,9 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a469c5eee096e30f9cc6bf6cb0a855a15"><td class="memItemLeft" align="right" valign="top"><a id="a469c5eee096e30f9cc6bf6cb0a855a15" name="a469c5eee096e30f9cc6bf6cb0a855a15"></a>
-geometry_msgs::msg::TransformStamped&#160;</td><td class="memItemRight" valign="bottom"><b>static_transformStamped</b></td></tr>
-<tr class="separator:a469c5eee096e30f9cc6bf6cb0a855a15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6585cdf9d37ddb48fcaf330fa9e5b0ac"><td class="memItemLeft" align="right" valign="top"><a id="a6585cdf9d37ddb48fcaf330fa9e5b0ac" name="a6585cdf9d37ddb48fcaf330fa9e5b0ac"></a>
+geometry_msgs::msg::TransformStamped&#160;</td><td class="memItemRight" valign="bottom"><b>static_transformStamped_</b></td></tr>
+<tr class="separator:a6585cdf9d37ddb48fcaf330fa9e5b0ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -527,8 +530,8 @@ false Failed to load terrain </dd></dl>
 
 </div>
 </div>
-<a id="a9f7825054a3e59f6a7fdd78d95c52699" name="a9f7825054a3e59f6a7fdd78d95c52699"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9f7825054a3e59f6a7fdd78d95c52699">&#9670;&#160;</a></span>Load()</h2>
+<a id="a96a2da9503ad94e6418a3ee13a5cbad1" name="a96a2da9503ad94e6418a3ee13a5cbad1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a96a2da9503ad94e6418a3ee13a5cbad1">&#9670;&#160;</a></span>Load() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -542,8 +545,8 @@ false Failed to load terrain </dd></dl>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::string&#160;</td>
-          <td class="paramname"><em>color_map_path</em> = <code>&quot;&quot;</code>&#160;</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>color_map_path</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -564,6 +567,40 @@ false Failed to load terrain </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>true Successfully loaded terrain </dd>
 <dd>
 false Failed to load terrain </dd></dl>
+
+</div>
+</div>
+<a id="aa3950bebf26d4a84502e8d43c04b352f" name="aa3950bebf26d4a84502e8d43c04b352f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3950bebf26d4a84502e8d43c04b352f">&#9670;&#160;</a></span>Load() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool GridMapGeo::Load </td>
+          <td>(</td>
+          <td class="paramtype">const std:;string &amp;&#160;</td>
+          <td class="paramname"><em>map_path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Overloading terrain loading with only elevation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">map_path</td><td>Path to dsm path (Supported formats are *.tif) </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
