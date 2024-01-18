@@ -1,6 +1,5 @@
 <launch>
     <arg name="rviz" default="true"/>
-    <arg name="location" default="sargans"/>
     <node pkg="tf2_ros" exec="static_transform_publisher" name="world_map" args="--frame-id world --child-frame-id map"/>
 
     <node pkg="grid_map_geo" exec="test_tif_loader" name="first_tif_loader" output="screen">

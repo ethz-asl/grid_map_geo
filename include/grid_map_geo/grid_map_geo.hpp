@@ -48,7 +48,7 @@ struct Location {
 
 class GridMapGeo {
  public:
-  GridMapGeo(const std::string frame_id = "map");
+  GridMapGeo(const std::string& frame_id = "map");
   virtual ~GridMapGeo();
 
   /**
@@ -91,6 +91,16 @@ class GridMapGeo {
    */
   std::string getCoordinateName() { return coordinate_name_; };
 
+
+  /**
+   * @brief Overloading terrain loading with only elevation
+   * 
+   * @param map_path Path to dsm path (Supported formats are *.tif)
+   */
+  bool Load(const std::string& map_path) {
+    Load(map_path, "");
+  }
+
   /**
    * @brief Helper function for loading terrain from path
    *
@@ -99,7 +109,7 @@ class GridMapGeo {
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool Load(const std::string& map_path, const std::string color_map_path = "");
+  bool Load(const std::string& map_path, const std::string &color_map_path);
 
   /**
    * @brief Initialize grid map from a geotiff file
@@ -170,7 +180,7 @@ class GridMapGeo {
    */
   void AddLayerNormals(std::string reference_layer);
 
-  geometry_msgs::msg::TransformStamped static_transformStamped;
+  geometry_msgs::msg::TransformStamped static_transformStamped_;
 
  protected:
   grid_map::GridMap grid_map_;

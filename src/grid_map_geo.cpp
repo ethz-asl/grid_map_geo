@@ -58,11 +58,11 @@
 #include <gdal/ogr_spatialref.h>
 #endif
 
-GridMapGeo::GridMapGeo(const std::string frame_id) { frame_id_ = frame_id; }
+GridMapGeo::GridMapGeo(const std::string& frame_id) { frame_id_ = frame_id; }
 
 GridMapGeo::~GridMapGeo() {}
 
-bool GridMapGeo::Load(const std::string &map_path, const std::string color_map_path) {
+bool GridMapGeo::Load(const std::string &map_path, const std::string &color_map_path) {
   bool loaded = initializeFromGeotiff(map_path);
   if (!color_map_path.empty()) {  // Load color layer if the color path is nonempty
     bool color_loaded = addColorFromGeotiff(color_map_path);

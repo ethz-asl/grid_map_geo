@@ -78,18 +78,18 @@ class MapPublisher : public rclcpp::Node {
     Eigen::Vector3d map_origin;
     map_->getGlobalOrigin(epsg, map_origin);
 
-    geometry_msgs::msg::TransformStamped static_transformStamped;
-    static_transformStamped.header.frame_id = map_->getCoordinateName();
-    static_transformStamped.child_frame_id = map_->getGridMap().getFrameId();
-    static_transformStamped.transform.translation.x = map_origin(0);
-    static_transformStamped.transform.translation.y = map_origin(1);
-    static_transformStamped.transform.translation.z = 0.0;
-    static_transformStamped.transform.rotation.x = 0.0;
-    static_transformStamped.transform.rotation.y = 0.0;
-    static_transformStamped.transform.rotation.z = 0.0;
-    static_transformStamped.transform.rotation.w = 1.0;
+    geometry_msgs::msg::TransformStamped static_transformStamped_;
+    static_transformStamped_.header.frame_id = map_->getCoordinateName();
+    static_transformStamped_.child_frame_id = map_->getGridMap().getFrameId();
+    static_transformStamped_.transform.translation.x = map_origin.x();
+    static_transformStamped_.transform.translation.y = map_origin.y();
+    static_transformStamped_.transform.translation.z = 0.0;
+    static_transformStamped_.transform.rotation.x = 0.0;
+    static_transformStamped_.transform.rotation.y = 0.0;
+    static_transformStamped_.transform.rotation.z = 0.0;
+    static_transformStamped_.transform.rotation.w = 1.0;
 
-    tf_broadcaster_->sendTransform(static_transformStamped);
+    tf_broadcaster_->sendTransform(static_transformStamped_);
   }
 
  private:
