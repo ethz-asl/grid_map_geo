@@ -1,6 +1,8 @@
-name: Build Test
+name: Doxygen Pages
 on:
   push:
+    branches:
+      - 'ros2'
   pull_request:
     branches:
     - '*'
@@ -10,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
     - uses: mattnotmitt/doxygen-action@v1.9.5
