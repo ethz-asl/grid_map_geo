@@ -95,6 +95,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:adc977cd9c5d58b18301e3d11c416cf4a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#adc977cd9c5d58b18301e3d11c416cf4a">getGlobalOrigin</a> (ESPG &amp;src_coord, Eigen::Vector3d &amp;origin)</td></tr>
 <tr class="memdesc:adc977cd9c5d58b18301e3d11c416cf4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Global Origin object.  <a href="classGridMapGeo.html#adc977cd9c5d58b18301e3d11c416cf4a">More...</a><br /></td></tr>
 <tr class="separator:adc977cd9c5d58b18301e3d11c416cf4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#ae77a5f02d46e9adc11b2a1507571f1b0">getCoordinateName</a> ()</td></tr>
+<tr class="memdesc:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the name of the coordinate frame of the dataset.  <a href="classGridMapGeo.html#ae77a5f02d46e9adc11b2a1507571f1b0">More...</a><br /></td></tr>
+<tr class="separator:ae77a5f02d46e9adc11b2a1507571f1b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">Load</a> (const std::string &amp;map_path, const std::string color_map_path=&quot;&quot;)</td></tr>
 <tr class="memdesc:a9f7825054a3e59f6a7fdd78d95c52699"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for loading terrain from path.  <a href="classGridMapGeo.html#a9f7825054a3e59f6a7fdd78d95c52699">More...</a><br /></td></tr>
 <tr class="separator:a9f7825054a3e59f6a7fdd78d95c52699"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -137,6 +140,9 @@ grid_map::GridMap&#160;</td><td class="memItemRight" valign="bottom"><b>grid_map
 <tr class="memitem:aa15c520a7c6ea636ac23e1ef683bbae3"><td class="memItemLeft" align="right" valign="top"><a id="aa15c520a7c6ea636ac23e1ef683bbae3" name="aa15c520a7c6ea636ac23e1ef683bbae3"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>frame_id_</b> {&quot;&quot;}</td></tr>
 <tr class="separator:aa15c520a7c6ea636ac23e1ef683bbae3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa84417cfc702a6b75553e19ddbeb0bdc"><td class="memItemLeft" align="right" valign="top"><a id="aa84417cfc702a6b75553e19ddbeb0bdc" name="aa84417cfc702a6b75553e19ddbeb0bdc"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>coordinate_name_</b> {&quot;&quot;}</td></tr>
+<tr class="separator:aa84417cfc702a6b75553e19ddbeb0bdc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a55981401f0ba6681ed5179c3ffaa2a8d" name="a55981401f0ba6681ed5179c3ffaa2a8d"></a>
@@ -391,6 +397,34 @@ false </dd></dl>
 
 </div>
 </div>
+<a id="ae77a5f02d46e9adc11b2a1507571f1b0" name="ae77a5f02d46e9adc11b2a1507571f1b0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae77a5f02d46e9adc11b2a1507571f1b0">&#9670;&#160;</a></span>getCoordinateName()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string GridMapGeo::getCoordinateName </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the name of the coordinate frame of the dataset. </p>
+<dl class="section return"><dt>Returns</dt><dd>std::string </dd></dl>
+
+</div>
+</div>
 <a id="adc977cd9c5d58b18301e3d11c416cf4a" name="adc977cd9c5d58b18301e3d11c416cf4a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#adc977cd9c5d58b18301e3d11c416cf4a">&#9670;&#160;</a></span>getGlobalOrigin()</h2>
 
@@ -490,7 +524,6 @@ false </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>true Successfully loaded terrain </dd>
 <dd>
 false Failed to load terrain </dd></dl>
-<p >TODO: Use TF for geocoordinates</p>
 
 </div>
 </div>
