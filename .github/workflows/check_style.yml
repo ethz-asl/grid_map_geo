@@ -18,7 +18,7 @@ jobs:
         - 'px4io/px4-dev-simulation-focal:2020-09-14'
     container: ${{ matrix.container }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: submodule update
       run: git submodule update --init --recursive
     - name: Install clang-format
