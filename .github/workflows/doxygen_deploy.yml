@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+    permissions:
+      contents: write
     steps:
     - uses: ./.github/workflows/doxygen_build.yml
     - uses: peaceiris/actions-gh-pages@v3
