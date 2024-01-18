@@ -44,22 +44,27 @@
 
 #include "grid_map_msgs/msg/grid_map.h"
 #include "grid_map_ros/GridMapRosConverter.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2_ros/static_transform_broadcaster.h"
 
 using namespace std::chrono_literals;
 
 class MapPublisher : public rclcpp::Node {
  public:
   MapPublisher() : Node("map_publisher") {
-    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
     std::string file_path = this->declare_parameter("tif_path", ".");
-    std::string color_path = this->declare_parameter("tif_color_path", "");
+    std::string color_path = this->declare_parameter("tif_color_path", ".");
+    std::string frame_id = this->declare_parameter("frame_id", "map");
+
+    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
     RCLCPP_INFO_STREAM(get_logger(), "file_path " << file_path);
     RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
+    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
-    map_ = std::make_shared<GridMapGeo>();
-    map_->Load(file_path, false, color_path);
+    map_ = std::make_shared<GridMapGeo>(frame_id);
+    map_->Load(file_path, color_path);
     auto timer_callback = [this]() -> void {
       auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
       if (msg) {
@@ -68,12 +73,29 @@ class MapPublisher : public rclcpp::Node {
       }
     };
     timer_ = this->create_wall_timer(5s, timer_callback);
+    ESPG epsg;
+    Eigen::Vector3d map_origin;
+    map_->getGlobalOrigin(epsg, map_origin);
+
+    geometry_msgs::msg::TransformStamped static_transformStamped_;
+    static_transformStamped_.header.frame_id = map_->getCoordinateName();
+    static_transformStamped_.child_frame_id = map_->getGridMap().getFrameId();
+    static_transformStamped_.transform.translation.x = map_origin.x();
+    static_transformStamped_.transform.translation.y = map_origin.y();
+    static_transformStamped_.transform.translation.z = 0.0;
+    static_transformStamped_.transform.rotation.x = 0.0;
+    static_transformStamped_.transform.rotation.y = 0.0;
+    static_transformStamped_.transform.rotation.z = 0.0;
+    static_transformStamped_.transform.rotation.w = 1.0;
+
+    tf_broadcaster_->sendTransform(static_transformStamped_);
   }
 
  private:
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr original_map_pub_;
   std::shared_ptr<GridMapGeo> map_;
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 };
 
 int main(int argc, char **argv) {

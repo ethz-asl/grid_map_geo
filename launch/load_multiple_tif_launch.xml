@@ -1,0 +1,22 @@
+<launch>
+    <arg name="rviz" default="true"/>
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="world_map" args="--frame-id world --child-frame-id map"/>
+
+    <node pkg="grid_map_geo" exec="test_tif_loader" name="first_tif_loader" output="screen">
+        <param name="frame_id" value="map"/>
+        <param name="tif_path" value="$(find-pkg-share grid_map_geo)/resources/sargans.tif"/>
+        <param name="tif_color_path" value="$(find-pkg-share grid_map_geo)/resources/sargans_color.tif"/>
+    </node>
+
+    <node pkg="grid_map_geo" exec="test_tif_loader" name="second_tif_loader" output="screen">
+        <param name="frame_id" value="dischma_valley"/>
+        <param name="tif_path" value="$(find-pkg-share grid_map_geo)/resources/dischma_valley.tif"/>
+        <param name="tif_color_path" value="$(find-pkg-share grid_map_geo)/resources/dischma_valley_color.tif"/>
+        <remap from="elevation_map" to="second_elevation_map"/>
+    </node>
+
+
+    <group if="$(var rviz)">
+        <node exec="rviz2" name="rviz2" pkg="rviz2"  args="-d $(find-pkg-share grid_map_geo)/rviz/multi_config.rviz" />
+    </group>
+</launch>

@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /GridMap1
+        - /GridMap2
       Splitter Ratio: 0.5
     Tree Height: 1106
   - Class: rviz_common/Selection
@@ -48,6 +49,32 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
+    - Alpha: 0.5
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: color
+      Color Transformer: ColorLayer
+      Enabled: true
+      Height Layer: elevation
+      Height Transformer: GridMapLayer
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: GridMap
+      Show Grid Lines: false
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /elevation2
+      Use Rainbow: true
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
@@ -71,7 +98,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /grid_map_geo/elevation_map
+        Value: /elevation_map
       Use Rainbow: true
       Value: true
   Enabled: true
@@ -120,25 +147,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8199.341796875
+      Distance: 22312.625
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -122.6202392578125
-        Y: -74.37590026855469
-        Z: 250.5304718017578
+        X: -469.88262939453125
+        Y: 4805.85498046875
+        Z: -1997.9356689453125
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7802029252052307
+      Pitch: 0.8752031326293945
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.7153979539871216
+      Yaw: 0.6453869342803955
     Saved: ~
 Window Geometry:
   Displays:
