@@ -85,6 +85,13 @@ class GridMapGeo {
   };
 
   /**
+   * @brief Get the name of the coordinate frame of the dataset
+   * 
+   * @return std::string 
+   */
+  std::string getCoordinateName() { return coordinate_name_; };
+
+  /**
    * @brief Helper function for loading terrain from path
    *
    * @param map_path Path to dsm path (Supported formats are *.tif)
@@ -169,5 +176,6 @@ class GridMapGeo {
   grid_map::GridMap grid_map_;
   Location maporigin_;
   std::string frame_id_{""};
+  std::string coordinate_name_{""};
 };
 #endif

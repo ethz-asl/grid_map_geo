@@ -103,7 +103,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   std::cout << std::endl << "Wkt ProjectionRef: " << pszProjection << std::endl;
 
   const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
-  std::string name_coordinate = spatial_ref->GetAttrValue("geogcs");
+  coordinate_name_ = spatial_ref->GetAttrValue("geogcs");
   // Get image metadata
   unsigned width = dataset->GetRasterXSize();
   unsigned height = dataset->GetRasterYSize();

@@ -64,7 +64,7 @@ class MapPublisher : public rclcpp::Node {
     RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
     tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
-    map_ = std::make_shared<GridMapGeo>();
+    map_ = std::make_shared<GridMapGeo>(frame_id);
     map_->Load(file_path, color_path);
     auto timer_callback = [this]() -> void {
       auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
@@ -79,7 +79,7 @@ class MapPublisher : public rclcpp::Node {
     map_->getGlobalOrigin(epsg, map_origin);
 
     geometry_msgs::msg::TransformStamped static_transformStamped;
-    // static_transformStamped.header.frame_id = map_->getCoordinateName();
+    static_transformStamped.header.frame_id = map_->getCoordinateName();
     static_transformStamped.child_frame_id = map_->getGridMap().getFrameId();
     static_transformStamped.transform.translation.x = map_origin(0);
     static_transformStamped.transform.translation.y = map_origin(1);

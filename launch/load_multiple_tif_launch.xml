@@ -5,19 +5,19 @@
 
     <node pkg="grid_map_geo" exec="test_tif_loader" name="first_tif_loader" output="screen">
         <param name="frame_id" value="map"/>
-        <param name="tif_path" value="/home/jaeyoung/dev/terrain-models/models/sertig.tif"/>
-        <param name="tif_color_path" value="/home/jaeyoung/dev/terrain-models/models/sertig_color.tif"/>
+        <param name="tif_path" value="$(find-pkg-share grid_map_geo)/resources/sargans.tif"/>
+        <param name="tif_color_path" value="$(find-pkg-share grid_map_geo)/resources/sargans_color.tif"/>
     </node>
 
     <node pkg="grid_map_geo" exec="test_tif_loader" name="second_tif_loader" output="screen">
         <param name="frame_id" value="dischma_valley"/>
-        <param name="tif_path" value="/home/jaeyoung/dev/terrain-models/models/dischma_valley.tif"/>
-        <param name="tif_color_path" value="/home/jaeyoung/dev/terrain-models/models/dischma_valley_color.tif"/>
+        <param name="tif_path" value="$(find-pkg-share grid_map_geo)/resources/dischma_valley.tif"/>
+        <param name="tif_color_path" value="$(find-pkg-share grid_map_geo)/resources/dischma_valley_color.tif"/>
         <param name="topic_name" value="elevation2"/>
     </node>
 
 
     <group if="$(var rviz)">
-        <node exec="rviz2" name="rviz2" pkg="rviz2"  args="-d $(find-pkg-share grid_map_geo)/rviz/config.rviz" />
+        <node exec="rviz2" name="rviz2" pkg="rviz2"  args="-d $(find-pkg-share grid_map_geo)/rviz/multi_config.rviz" />
     </group>
 </launch>
