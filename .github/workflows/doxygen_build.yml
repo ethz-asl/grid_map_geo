@@ -1,24 +1,18 @@
-name: Doxygen Pages
+name: Doxygen Build
 on:
   push:
     branches:
       - 'ros2'
   pull_request:
     branches:
-    - '*'
+      - '*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    permissions:
-      contents: write
     steps:
     - uses: actions/checkout@v4
     - uses: mattnotmitt/doxygen-action@v1.9.5
-    - uses: peaceiris/actions-gh-pages@v3
-      with: 
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./html
 
