@@ -56,9 +56,8 @@ class MapPublisher : public rclcpp::Node {
     std::string file_path = this->declare_parameter("tif_path", ".");
     std::string color_path = this->declare_parameter("tif_color_path", ".");
     std::string frame_id = this->declare_parameter("frame_id", "map");
-    std::string topic_name = this->declare_parameter("topic_name", "elevation_map");
 
-    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(topic_name, 1);
+    original_map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
 
     RCLCPP_INFO_STREAM(get_logger(), "file_path " << file_path);
     RCLCPP_INFO_STREAM(get_logger(), "color_path " << color_path);
