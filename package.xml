@@ -16,6 +16,7 @@
   <depend>eigen</depend>
   <depend>grid_map_core</depend>
   <depend>grid_map_ros</depend>
+  <depend>tf2_ros</depend>
   <depend>libgdal-dev</depend>
   <depend>rclcpp</depend>
   <depend>yaml_cpp_vendor</depend>

@@ -38,6 +38,7 @@
 
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
+#include "tf2_ros/transform_broadcaster.h"
 
 #include <iostream>
 struct Location {
@@ -47,7 +48,7 @@ struct Location {
 
 class GridMapGeo {
  public:
-  GridMapGeo();
+  GridMapGeo(const std::string& frame_id = "map");
   virtual ~GridMapGeo();
 
   /**
@@ -84,32 +85,40 @@ class GridMapGeo {
   };
 
   /**
-   * @brief Set the Altitude Origin object
-   *
-   * @param altitude
+   * @brief Get the name of the coordinate frame of the dataset
+   * 
+   * @return std::string 
    */
-  void setAltitudeOrigin(const double altitude) { localorigin_altitude_ = altitude; };
+  std::string getCoordinateName() { return coordinate_name_; };
+
+
+  /**
+   * @brief Overloading terrain loading with only elevation
+   * 
+   * @param map_path Path to dsm path (Supported formats are *.tif)
+   */
+  bool Load(const std::string& map_path) {
+    Load(map_path, "");
+  }
 
   /**
    * @brief Helper function for loading terrain from path
    *
    * @param map_path Path to dsm path (Supported formats are *.tif)
-   * @param algin_terrain Geo align terrain
    * @param color_map_path  Path to color raster files to visualize terrain texture (Supported formats are *.tif)
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool Load(const std::string& map_path, bool algin_terrain, const std::string color_map_path = "");
+  bool Load(const std::string& map_path, const std::string &color_map_path);
 
   /**
    * @brief Initialize grid map from a geotiff file
    *
    * @param path Path to dsm path (Supported formats are *.tif)
-   * @param align_terrain
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool initializeFromGeotiff(const std::string& path, bool align_terrain = true);
+  bool initializeFromGeotiff(const std::string& path);
 
   /**
    * @brief Load a color layer from a geotiff file (orthomosaic)
@@ -171,11 +180,12 @@ class GridMapGeo {
    */
   void AddLayerNormals(std::string reference_layer);
 
+  geometry_msgs::msg::TransformStamped static_transformStamped_;
+
  protected:
   grid_map::GridMap grid_map_;
-  double localorigin_e_{789823.93};  // duerrboden berghaus
-  double localorigin_n_{177416.56};
-  double localorigin_altitude_{0.0};
   Location maporigin_;
+  std::string frame_id_{""};
+  std::string coordinate_name_{""};
 };
 #endif
