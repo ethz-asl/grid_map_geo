@@ -2,7 +2,7 @@
 FROM ros:humble
 
 # Set the working directory
-WORKDIR /ros2_workspace/src
+WORKDIR /root/ros2_ws/src
 
 COPY . .
 # Install additional dependencies
@@ -17,9 +17,8 @@ RUN apt-get update \
     ros-humble-rviz2
 
 # Set environment variables
-ENV ROS_DISTRO humble
 ENV ROS_VERSION 2
-WORKDIR /ros2_workspace
+WORKDIR /root/ros2_ws
 RUN . /opt/ros/humble/setup.sh
 RUN rosdep update
 RUN rosdep install --from-paths src --ignore-src -y
