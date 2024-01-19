@@ -17,7 +17,6 @@ RUN apt-get update \
     ros-humble-rviz2
 
 # Set environment variables
-ENV ROS_DISTRO humble
 ENV ROS_VERSION 2
 WORKDIR /ros2_workspace
 RUN . /opt/ros/humble/setup.sh
