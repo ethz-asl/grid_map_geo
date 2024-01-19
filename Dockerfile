@@ -2,7 +2,7 @@
 FROM ros:humble
 
 # Set the working directory
-WORKDIR /ros2_workspace/src
+WORKDIR /root/ros2_ws/src
 
 COPY . .
 # Install additional dependencies
