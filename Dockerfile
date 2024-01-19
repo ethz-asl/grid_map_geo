@@ -18,7 +18,7 @@ RUN apt-get update \
 
 # Set environment variables
 ENV ROS_VERSION 2
-WORKDIR /ros2_workspace
+WORKDIR /root/ros2_ws
 RUN . /opt/ros/humble/setup.sh
 RUN rosdep update
 RUN rosdep install --from-paths src --ignore-src -y
