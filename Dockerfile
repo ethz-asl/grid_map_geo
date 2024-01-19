@@ -33,3 +33,4 @@ EXPOSE 11311
 
 # Run a default command, e.g., starting a bash shell
 CMD ["bash"]
+
