@@ -35,6 +35,3 @@ source install/setup.bash
 ros2 launch grid_map_geo load_tif_launch.xml
 ```
 
-## API Documentation
-
-Documentation for the C++ API in grid_map_geo is [here](https://ethz-asl.github.io/grid_map_geo/index.html).
