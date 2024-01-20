@@ -37,14 +37,12 @@
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "grid_map_geo/grid_map_geo.hpp"
-
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-
 #include "grid_map_msgs/msg/grid_map.h"
 #include "grid_map_ros/GridMapRosConverter.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
 
 using namespace std::chrono_literals;
@@ -52,7 +50,6 @@ using namespace std::chrono_literals;
 class MapPublisher : public rclcpp::Node {
  public:
   MapPublisher() : Node("map_publisher") {
-
     std::string file_path = this->declare_parameter("tif_path", ".");
     std::string color_path = this->declare_parameter("tif_color_path", ".");
     std::string frame_id = this->declare_parameter("frame_id", "map");

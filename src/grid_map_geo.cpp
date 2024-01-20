@@ -58,7 +58,7 @@
 #include <gdal/ogr_spatialref.h>
 #endif
 
-GridMapGeo::GridMapGeo(const std::string& frame_id) { frame_id_ = frame_id; }
+GridMapGeo::GridMapGeo(const std::string &frame_id) { frame_id_ = frame_id; }
 
 GridMapGeo::~GridMapGeo() {}
 

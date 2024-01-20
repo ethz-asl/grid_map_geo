@@ -1,7 +1,8 @@
-#include "grid_map_geo/transform.hpp"
-
 #include <gtest/gtest.h>
+
 #include <iostream>
+
+#include "grid_map_geo/transform.hpp"
 
 TEST(GridMapTest, geoTransform) {
   Eigen::Vector3d berghaus_wgs84(46.7209147, 9.9219592, 488.0);
