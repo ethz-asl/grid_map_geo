@@ -36,7 +36,7 @@ First of all, you have to build the project and create an  image like so:
 ## Assuimg you are in the correct project directory
 docker build -t gmg .
 ```
-To use shortcut , you may use following command;
+To use a shortcut, you may use the following command:
 
 ```bash
 ## Assuimg you are in the correct project directory
