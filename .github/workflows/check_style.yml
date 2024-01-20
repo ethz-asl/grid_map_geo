@@ -14,16 +14,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container:
-        - 'px4io/px4-dev-simulation-focal:2020-09-14'
-    container: ${{ matrix.container }}
+        config:
+          - {rosdistro: 'humble', container: 'osrf/ros:humble-desktop'}
+    container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v4
-    - name: submodule update
-      run: git submodule update --init --recursive
-    - name: Install clang-format
-      run: apt update && apt install -y clang-format-6.0
+      with:
+        path: src/grid_map_geo
+    - name: Install Dependencies with Rosdep
+      run: |
+        apt update
+        rosdep update
+        source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
+        rosdep install --from-paths src --ignore-src -y --dependency-types test
+      shell: bash
     - name: Check Code format
-      working-directory: Tools
+      working-directory: src/grid_map_geo/Tools
       run: |
         ./check_code_format.sh ..
