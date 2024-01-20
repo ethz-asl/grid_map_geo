@@ -18,22 +18,19 @@ jobs:
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v4
-    - name: Install Dependencies
-      working-directory: 
+      with:
+        path: src/grid_map_geo
+    - name: Install Dependencies with Rosdep
       run: |
         apt update
-        apt install -y python3-wstool libgdal-dev
+        rosdep update
+        source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
+        rosdep install --from-paths src --ignore-src -y
       shell: bash
-    - name: Build Test
+    - name: Colcon Build (Release)
       working-directory: 
       run: |
-        mkdir -p $HOME/ros2_ws/src;
-        cd $HOME/ros2_ws/src
-        ln -s $GITHUB_WORKSPACE
-        cd $HOME/ros2_ws
-        source /opt/ros/humble/setup.bash
-        rosdep update
-        rosdep install --from-paths src --ignore-src -y --rosdistro ${{matrix.config.rosdistro}}
+        source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
         colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
       shell: bash
     # - name: unit_tests

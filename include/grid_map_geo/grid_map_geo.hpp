@@ -34,13 +34,12 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
-#include "grid_map_geo/transform.hpp"
-
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
-#include "tf2_ros/transform_broadcaster.h"
-
 #include <iostream>
+
+#include "grid_map_geo/transform.hpp"
+#include "tf2_ros/transform_broadcaster.h"
 struct Location {
   ESPG espg{ESPG::WGS84};
   Eigen::Vector3d position{Eigen::Vector3d::Zero()};
@@ -86,20 +85,17 @@ class GridMapGeo {
 
   /**
    * @brief Get the name of the coordinate frame of the dataset
-   * 
-   * @return std::string 
+   *
+   * @return std::string
    */
   std::string getCoordinateName() { return coordinate_name_; };
 
-
   /**
    * @brief Overloading terrain loading with only elevation
-   * 
+   *
    * @param map_path Path to dsm path (Supported formats are *.tif)
    */
-  bool Load(const std::string& map_path) {
-    Load(map_path, "");
-  }
+  bool Load(const std::string& map_path) { Load(map_path, ""); }
 
   /**
    * @brief Helper function for loading terrain from path
@@ -109,7 +105,7 @@ class GridMapGeo {
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool Load(const std::string& map_path, const std::string &color_map_path);
+  bool Load(const std::string& map_path, const std::string& color_map_path);
 
   /**
    * @brief Initialize grid map from a geotiff file
