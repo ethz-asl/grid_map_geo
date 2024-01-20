@@ -43,7 +43,7 @@ To use a shortcut, you may use the following command:
 make docker_build
 ```
 
-After create image, copy and paste the following command to terminal to run image;
+After the image is created, copy and paste the following command to the terminal to run the image:
 
 ```bash
 ## Assuimg you are in the correct project directory
