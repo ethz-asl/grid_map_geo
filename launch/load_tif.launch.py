@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -46,7 +46,7 @@ def generate_launch_description():
     rviz = Node(
         package="rviz2",
         executable="rviz2",
-        arguments=["-d", os.path.join(pkg_grid_map_geo, "rviz", "config.rviz")],
+        arguments=["-d", f'{Path(pkg_grid_map_geo) / "rviz" / "config.rviz"}'],
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
@@ -65,16 +65,12 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "tif_path",
-                default_value=os.path.join(
-                    pkg_grid_map_geo, "resources", default_tif_file
-                ),
+                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_tif_file}',
                 description="Full path to the elevation map file.",
             ),
             DeclareLaunchArgument(
                 "tif_color_path",
-                default_value=os.path.join(
-                    pkg_grid_map_geo, "resources", default_tif_color_file
-                ),
+                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_tif_color_file}',
                 description="Full path to the elevation texture file.",
             ),
             static_transform_publisher,
