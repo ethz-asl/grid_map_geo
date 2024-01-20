@@ -3,7 +3,7 @@ name: Style Checks
 on:
   push:
     branches:
-      - master
+      - ros2
   pull_request:
     branches:
       - '*'

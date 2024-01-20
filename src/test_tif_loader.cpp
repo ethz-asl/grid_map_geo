@@ -31,19 +31,21 @@
  *
  ****************************************************************************/
 /**
- * @brief Node to test planner in the view utiltiy map
+ * @brief Node to test planner in the view utility map
  *
  *
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
-#include "geometry_msgs/msg/transform_stamped.hpp"
+#include <grid_map_msgs/msg/grid_map.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+
 #include "grid_map_geo/grid_map_geo.hpp"
-#include "grid_map_msgs/msg/grid_map.h"
-#include "grid_map_ros/GridMapRosConverter.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "tf2_ros/static_transform_broadcaster.h"
 
 using namespace std::chrono_literals;
 

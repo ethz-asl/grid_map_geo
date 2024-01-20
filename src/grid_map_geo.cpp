@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @brief Terain map representation
+ * @brief Terrain map representation
  *
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */

@@ -31,31 +31,49 @@
  *
  ****************************************************************************/
 
-#ifndef GRID_MAP_GEO_TRANSFORM_H
-#define GRID_MAP_GEO_TRANSFORM_H
+#include "grid_map_geo/transform.hpp"
 
-#include <Eigen/Dense>
+#if __APPLE__
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <ogr_p.h>
+#include <ogr_spatialref.h>
+#else
+#include <gdal/gdal.h>
+#include <gdal/gdal_priv.h>
+#include <gdal/ogr_p.h>
+#include <gdal/ogr_spatialref.h>
+#endif
 
-enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781 };
+Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates) {
+  OGRSpatialReference source, target;
+  source.importFromEPSG(static_cast<int>(src_coord));
+  target.importFromEPSG(static_cast<int>(tgt_coord));
 
-/**
- * @brief Helper function for transforming using gdal
- *
- * @param src_coord
- * @param tgt_coord
- * @param source_coordinates
- * @return Eigen::Vector3d
- */
-Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates);
+  OGRPoint p;
+  p.setX(source_coordinates(0));
+  p.setY(source_coordinates(1));
+  p.setZ(source_coordinates(2));
+  p.assignSpatialReference(&source);
 
-/**
- * @brief Helper function for transforming using gdal
- *
- * @param src_coord
- * @param wkt
- * @param source_coordinates
- * @return Eigen::Vector3d
- */
-Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates);
+  p.transformTo(&target);
+  Eigen::Vector3d target_coordinates(p.getX(), p.getY(), p.getZ());
+  return target_coordinates;
+}
 
-#endif  // GRID_MAP_GEO_TRANSFORM_H
+Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates) {
+  OGRSpatialReference source, target;
+  char* wkt_string = const_cast<char*>(wkt.c_str());
+  source.importFromEPSG(static_cast<int>(src_coord));
+  target.importFromWkt(&wkt_string);
+
+  OGRPoint p;
+  p.setX(source_coordinates(0));
+  p.setY(source_coordinates(1));
+  p.setZ(source_coordinates(2));
+  p.assignSpatialReference(&source);
+
+  p.transformTo(&target);
+  Eigen::Vector3d target_coordinates(p.getX(), p.getY(), p.getZ());
+  return target_coordinates;
+}
