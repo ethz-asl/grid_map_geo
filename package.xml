@@ -20,8 +20,10 @@
   <depend>libgdal-dev</depend>
   <depend>rclcpp</depend>
   <depend>yaml_cpp_vendor</depend>
-  <exec_depend>ros2launch</exec_depend>
+
   <exec_depend>grid_map_rviz_plugin</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
