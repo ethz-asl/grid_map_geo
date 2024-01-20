@@ -17,10 +17,7 @@ jobs:
           - {rosdistro: 'humble', container: 'osrf/ros:humble-desktop'}
     container: ${{ matrix.config.container }}
     steps:
-    - uses: actions/checkout@v1
-      with:
-        token: ${{ secrets.ACCESS_TOKEN }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v4
     - name: Install Dependencies
       working-directory: 
       run: |

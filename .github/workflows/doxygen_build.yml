@@ -1,9 +1,11 @@
-name: Build Test
+name: Doxygen Build
 on:
   push:
+    branches:
+      - 'ros2'
   pull_request:
     branches:
-    - '*'
+      - '*'
 
 jobs:
   build:
@@ -13,8 +15,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: mattnotmitt/doxygen-action@v1.9.5
-    - uses: peaceiris/actions-gh-pages@v3
-      with: 
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./html
 
