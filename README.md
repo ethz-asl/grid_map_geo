@@ -49,7 +49,7 @@ After the image is created, copy and paste the following command to the terminal
 ## Assuimg you are in the correct project directory
 docker run -it --net=host --ipc=host --privileged --env="DISPLAY"  --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --volume="${XAUTHORITY}:/root/.Xauthority"  --entrypoint /bin/bash gmg
 ```
-To use shortcut, you may use following commad;
+To use a shortcut, you may use following command:
 
 ```bash
 make docker_run
