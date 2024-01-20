@@ -30,7 +30,7 @@ colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_g
 
 If your operating system doesn't support ROS 2 humble, docker is a great alternative.
 
-First of all, you have to build project and create image by copy and paste following command to terminal
+First of all, you have to build the project and create an  image like so:
 
 ```bash
 ## Assuimg you are in the correct project directory
