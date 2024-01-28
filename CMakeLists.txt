@@ -25,8 +25,6 @@ find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(GDAL 3 REQUIRED)
 
-find_package(yaml_cpp_vendor REQUIRED)
-link_directories(${yaml_cpp_vendor_LIBRARY_DIRS})
 
 # Reverse compatability for GDAL<3.5
 # https://gdal.org/development/cmake.html
@@ -37,13 +35,13 @@ endif()
 # Build
 add_library(${PROJECT_NAME}
   src/grid_map_geo.cpp
+  src/transform.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-)
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen PRIVATE GDAL::GDAL)
 
@@ -77,7 +75,9 @@ install(
 )
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(GDAL)
+
+# Everything in find_package goes here too, ordered alphabetically.
+ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_msgs grid_map_ros tf2_ros rclcpp)
 
 install(
   TARGETS
@@ -103,7 +103,7 @@ install(DIRECTORY
 # Test
 include(CTest)
 if(BUILD_TESTING)
-  add_subdirectory(test)
+  add_subdirectory(test/unit)
 endif()
 
 ament_package()

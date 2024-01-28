@@ -34,12 +34,13 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 #include <iostream>
 
-#include "grid_map_geo/transform.hpp"
-#include "tf2_ros/transform_broadcaster.h"
+#include "transform.hpp"
 struct Location {
   ESPG espg{ESPG::WGS84};
   Eigen::Vector3d position{Eigen::Vector3d::Zero()};
@@ -95,7 +96,7 @@ class GridMapGeo {
    *
    * @param map_path Path to dsm path (Supported formats are *.tif)
    */
-  bool Load(const std::string& map_path) { Load(map_path, ""); }
+  bool Load(const std::string& map_path) { return Load(map_path, ""); }
 
   /**
    * @brief Helper function for loading terrain from path
@@ -184,4 +185,4 @@ class GridMapGeo {
   std::string frame_id_{""};
   std::string coordinate_name_{""};
 };
-#endif
+#endif  // GRID_MAP_GEO_H

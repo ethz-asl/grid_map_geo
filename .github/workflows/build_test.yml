@@ -28,10 +28,17 @@ jobs:
         rosdep install --from-paths src --ignore-src -y
       shell: bash
     - name: Colcon Build (Release)
-      working-directory: 
       run: |
         source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
         colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
+      shell: bash
+    - name: Verify Export
+      run: |
+        source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
+        source install/setup.bash
+        cd src/grid_map_geo/test/export
+        colcon build
+        ./build/grid_map_export_test/main
       shell: bash
     # - name: unit_tests
     #   working-directory:
