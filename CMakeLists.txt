@@ -59,6 +59,13 @@ target_link_libraries(test_tif_loader PUBLIC
   ${PROJECT_NAME}
 )
 
+# Fix for yaml_cpp not resolving correctly on macOS
+# https://github.com/ethz-asl/grid_map_geo/pull/59#discussion_r1474669370
+if (APPLE)
+  find_package(yaml_cpp_vendor REQUIRED)
+  link_directories(${yaml_cpp_vendor_LIBRARY_DIRS})
+endif()
+
 # Install
 install(
   DIRECTORY include/
