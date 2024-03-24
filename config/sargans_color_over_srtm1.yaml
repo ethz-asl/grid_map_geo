@@ -1,0 +1,8 @@
+map_publisher:
+    ros__parameters:
+        gdal_dataset_path: /vsizip/vsicurl/https://terrain.ardupilot.org/SRTM1/N09E047.hgt.zip/N09E047.hgt
+        gdal_dataset_color_path: "resources/sargans_color.tif"
+        max_map_width: 3601
+        max_map_height: 3601
+        map_origin_latitude: 47.033333
+        map_origin_longitude: 9.433333

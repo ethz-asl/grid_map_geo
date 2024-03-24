@@ -34,17 +34,17 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
-#include <tf2_ros/transform_broadcaster.h>
-
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
+
+// Color map is optional. If left as this default value, color will not be loaded.
+static const std::string COLOR_MAP_DEFAULT_PATH{""};
+
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <iostream>
 
-#include "transform.hpp"
-struct Location {
-  ESPG espg{ESPG::WGS84};
-  Eigen::Vector3d position{Eigen::Vector3d::Zero()};
-};
+// #include "transform.hpp"
+#include "grid_map_geo/transform.hpp"
 
 class GridMapGeo {
  public:
@@ -99,6 +99,14 @@ class GridMapGeo {
   bool Load(const std::string& map_path) { return Load(map_path, ""); }
 
   /**
+   * @brief Helper function for setting maximum map size. Set to 0 to disable bounds check.
+   *
+   * @param pixels_x Maximum number of raster pixels in the X direction
+   * @param pixels_y Maximum number of raster pixels in the Y direction
+   */
+  void setMaxMapSizePixels(const int pixels_x, const int pixels_y);
+
+  /**
    * @brief Helper function for loading terrain from path
    *
    * @param map_path Path to dsm path (Supported formats are *.tif)
@@ -106,16 +114,16 @@ class GridMapGeo {
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool Load(const std::string& map_path, const std::string& color_map_path);
+  bool Load(const std::string& map_path, const std::string color_map_path);
 
   /**
-   * @brief Initialize grid map from a geotiff file
+   * @brief Initialize grid map from a GDAL dataset
    *
-   * @param path Path to dsm path (Supported formats are *.tif)
+   * @param path Path to dsm path (Supported formats are https://gdal.org/drivers/raster/index.html)
    * @return true Successfully loaded terrain
    * @return false Failed to load terrain
    */
-  bool initializeFromGeotiff(const std::string& path);
+  bool initializeFromGdalDataset(const std::string& path);
 
   /**
    * @brief Load a color layer from a geotiff file (orthomosaic)
@@ -184,5 +192,10 @@ class GridMapGeo {
   Location maporigin_;
   std::string frame_id_{""};
   std::string coordinate_name_{""};
+
+ private:
+  // Set default map size occupying 4MB RAM assuming 32 bit height precision.
+  int max_raster_x_size_{1024};
+  int max_raster_y_size_{1024};
 };
 #endif  // GRID_MAP_GEO_H
