@@ -85,6 +85,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
 
   const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
   std::string name_coordinate = spatial_ref->GetAttrValue("geogcs");
+  std::string epsg_code = spatial_ref->GetAttrValue("AUTHORITY", 1);
   // Get image metadata
   unsigned width = dataset->GetRasterXSize();
   unsigned height = dataset->GetRasterYSize();
@@ -99,7 +100,7 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
 
   double mapcenter_e = originX + pixelSizeX * width * 0.5;
   double mapcenter_n = originY + pixelSizeY * height * 0.5;
-  maporigin_.espg = ESPG::CH1903_LV03;
+  maporigin_.espg = static_cast<ESPG>(std::stoi(epsg_code));
   maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
