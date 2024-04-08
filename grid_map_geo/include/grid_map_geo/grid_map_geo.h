@@ -107,7 +107,7 @@ class GridMapGeo {
    */
   bool initializeFromGeotiff(const std::string& path);
 
-  bool initializeFromVrt(const std::string& path);
+  bool initializeFromVrt(const std::string& path, const Eigen::Vector2d &map_center, Eigen::Vector2d &extent);
 
   /**
    * @brief Load a color layer from a geotiff file (orthomosaic)
