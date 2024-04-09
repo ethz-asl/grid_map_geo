@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>grid_map_geo_msgs</name>
+  <version>0.0.1</version>
+  <description>
+   geomap_msgs includes the definition for custom services and messages for the grid_map_geo package.
+  </description>
+
+  <maintainer email="jalim@student.ethz.ch">Jaeyoung Lim</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>std_msgs</depend>
+  <!-- XXX needed for users of mavlink_convert.h
+  <build_export_depend>libmavconn</build_export_depend>
+  -->
+
+  <export>
+    <architecture_independent/>
+  </export>
+</package>
