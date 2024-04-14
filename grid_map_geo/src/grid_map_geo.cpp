@@ -141,7 +141,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   return true;
 }
 
-bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2d &map_center, Eigen::Vector2d &extent) {
+bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2d &map_center,
+                                   Eigen::Vector2d &extent) {
   GDALAllRegister();
   GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
   if (!dataset) {
@@ -175,18 +176,16 @@ bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2
   std::cout << "Width: " << width << " Height: " << height << " Resolution: " << resolution << std::endl;
 
   // pixelSizeY is negative because the origin of the image is the north-east corner and positive
-  // Y pixel coordinates go towards the south  
-  int grid_width = extent(0)/std::abs(resolution);
-  int grid_height = extent(1)/std::abs(resolution);
+  // Y pixel coordinates go towards the south
+  int grid_width = extent(0) / std::abs(resolution);
+  int grid_height = extent(1) / std::abs(resolution);
   const double lengthX = resolution * grid_width;
   const double lengthY = resolution * grid_height;
   grid_map::Length length(lengthX, lengthY);
   std::cout << "length: " << length.transpose() << std::endl;
 
-  double mapcenter_e = map_center(0);
-  double mapcenter_n = map_center(1);
   maporigin_.espg = static_cast<ESPG>(std::stoi(epsg_code));
-  maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
+  maporigin_.position = map_center.head(2);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
@@ -197,12 +196,12 @@ bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2
   grid_map_.add("elevation");
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
 
-  Eigen::Vector2d center_px((mapcenter_e - geoTransform[0])/geoTransform[1], (mapcenter_n - geoTransform[3])/geoTransform[5]);
+  Eigen::Vector2d center_px((map_center(1) - geoTransform[0]) / geoTransform[1],
+                            (map_center(0) - geoTransform[3]) / geoTransform[5]);
 
   const auto raster_io_x_offset = center_px.x() - grid_width / 2;
   const auto raster_io_y_offset = center_px.y() - grid_height / 2;
   std::cout << "center_px: " << center_px.transpose() << std::endl;
-
 
   std::vector<float> data(grid_width * grid_height, 0.0f);
   const auto raster_err = elevationBand->RasterIO(GF_Read, raster_io_x_offset, raster_io_y_offset, grid_width,
@@ -227,8 +226,8 @@ bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2
   static_transformStamped.header.stamp = ros::Time::now();
   static_transformStamped.header.frame_id = name_coordinate;
   static_transformStamped.child_frame_id = frame_id_;
-  static_transformStamped.transform.translation.x = mapcenter_e;
-  static_transformStamped.transform.translation.y = mapcenter_n;
+  static_transformStamped.transform.translation.x = map_center(0);
+  static_transformStamped.transform.translation.y = map_center(1);
   static_transformStamped.transform.translation.z = 0.0;
   static_transformStamped.transform.rotation.x = 0.0;
   static_transformStamped.transform.rotation.y = 0.0;
