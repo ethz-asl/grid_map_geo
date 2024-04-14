@@ -1,0 +1,13 @@
+<launch>
+    <arg name="visualization" default="true"/>
+    <arg name="location" default="hinwil"/>
+
+    <node pkg="grid_map_geo" type="terrain_loader" name="terrain_loader" output="screen">
+        <!-- <param name="terrain_path" value="$(find terrain_models)/models/$(arg location).tif"/> -->
+        <param name="terrain_path" value="/vsizip/vsicurl/https://terrain.ardupilot.org/SRTM1/ap_srtm1.zip/ap_srtm1.vrt"/>
+    </node>
+    
+    <group if="$(arg visualization)">
+        <node type="rviz" name="rviz" pkg="rviz" args="-d $(find grid_map_geo)/launch/terrain_loader.rviz" output="screen"/>
+    </group>
+</launch>
