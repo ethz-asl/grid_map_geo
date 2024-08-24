@@ -37,3 +37,13 @@ The default launch file can be run as the following command.
 ```
 roslaunch grid_map_geo load_tif.launch
 ```
+
+
+## Loading teerrain from a VRT server
+
+One can load a DEM from a terrain server directly.
+```
+roslaunch grid_map_geo run_terrain_loader.launch
+```
+
+![terrain-loader](https://github.com/ethz-asl/grid_map_geo/assets/5248102/e93b2c86-c26a-477c-8704-dc0233b7ef2e)

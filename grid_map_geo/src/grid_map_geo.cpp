@@ -141,6 +141,102 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   return true;
 }
 
+bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2d &map_center,
+                                   Eigen::Vector2d &extent) {
+  GDALAllRegister();
+  GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
+  if (!dataset) {
+    std::cout << "Failed to open" << std::endl;
+    return false;
+  }
+  std::cout << std::endl << "Loading GeoTIFF file for gridmap" << std::endl;
+
+  double originX, originY, pixelSizeX, pixelSizeY;
+  double geoTransform[6];
+  if (dataset->GetGeoTransform(geoTransform) == CE_None) {
+    originX = geoTransform[0];
+    originY = geoTransform[3];
+    pixelSizeX = geoTransform[1];
+    pixelSizeY = geoTransform[5];
+  } else {
+    std::cout << "Failed read geotransform" << std::endl;
+    return false;
+  }
+
+  const char *pszProjection = dataset->GetProjectionRef();
+  std::cout << std::endl << "Wkt ProjectionRef: " << pszProjection << std::endl;
+
+  const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
+  std::string name_coordinate = spatial_ref->GetAttrValue("geogcs");
+  std::string epsg_code = spatial_ref->GetAttrValue("AUTHORITY", 1);
+  // Get image metadata
+  unsigned width = dataset->GetRasterXSize();
+  unsigned height = dataset->GetRasterYSize();
+  double resolution = pixelSizeX;
+  std::cout << "Width: " << width << " Height: " << height << " Resolution: " << resolution << std::endl;
+
+  // pixelSizeY is negative because the origin of the image is the north-east corner and positive
+  // Y pixel coordinates go towards the south
+  int grid_width = extent(0) / std::abs(resolution);
+  int grid_height = extent(1) / std::abs(resolution);
+  const double lengthX = resolution * grid_width;
+  const double lengthY = resolution * grid_height;
+  grid_map::Length length(lengthX, lengthY);
+  std::cout << "length: " << length.transpose() << std::endl;
+
+  maporigin_.espg = static_cast<ESPG>(std::stoi(epsg_code));
+  maporigin_.position = map_center.head(2);
+
+  Eigen::Vector2d position{Eigen::Vector2d::Zero()};
+
+  grid_map_.setGeometry(length, resolution, position);
+  std::cout << "position: " << position.transpose() << std::endl;
+  /// TODO: Use TF for geocoordinates
+  grid_map_.setFrameId(frame_id_);
+  grid_map_.add("elevation");
+  GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
+
+  Eigen::Vector2d center_px((map_center(1) - geoTransform[0]) / geoTransform[1],
+                            (map_center(0) - geoTransform[3]) / geoTransform[5]);
+
+  const auto raster_io_x_offset = center_px.x() - grid_width / 2;
+  const auto raster_io_y_offset = center_px.y() - grid_height / 2;
+  std::cout << "center_px: " << center_px.transpose() << std::endl;
+
+  std::vector<float> data(grid_width * grid_height, 0.0f);
+  const auto raster_err = elevationBand->RasterIO(GF_Read, raster_io_x_offset, raster_io_y_offset, grid_width,
+                                                  grid_height, &data[0], grid_width, grid_height, GDT_Float32, 0, 0);
+  if (raster_err != CPLE_None) {
+    std::cout << "Error loading raster" << std::endl;
+    return false;
+  }
+  grid_map::Matrix &layer_elevation = grid_map_["elevation"];
+  for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index gridMapIndex = *iterator;
+    // TODO: This may be wrong if the pixelSizeY > 0
+    int x = grid_width - 1 - gridMapIndex(0);
+    int y = gridMapIndex(1);
+
+    layer_elevation(x, y) = data[gridMapIndex(0) + grid_width * gridMapIndex(1)];
+  }
+
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+  geometry_msgs::TransformStamped static_transformStamped;
+
+  static_transformStamped.header.stamp = ros::Time::now();
+  static_transformStamped.header.frame_id = name_coordinate;
+  static_transformStamped.child_frame_id = frame_id_;
+  static_transformStamped.transform.translation.x = map_center(0);
+  static_transformStamped.transform.translation.y = map_center(1);
+  static_transformStamped.transform.translation.z = 0.0;
+  static_transformStamped.transform.rotation.x = 0.0;
+  static_transformStamped.transform.rotation.y = 0.0;
+  static_transformStamped.transform.rotation.z = 0.0;
+  static_transformStamped.transform.rotation.w = 1.0;
+  static_broadcaster.sendTransform(static_transformStamped);
+  return true;
+}
+
 bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   GDALAllRegister();
   GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
