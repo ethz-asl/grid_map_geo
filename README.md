@@ -78,13 +78,13 @@ ros2 launch grid_map_geo load_tif_launch.xml
 To debug the map publisher in GDB:
 
 ```bash
-colcon build --mixin debug --packages-up-to grid_map_geo --symlink-install
+colcon build --mixin debug --packages-up-to grid_map_geo
 source install/setup.bash
 
 # To debug the node under GDB
 ros2 run --prefix 'gdb -ex run --args' \
 grid_map_geo map_publisher --ros-args \
--p gdal_dataset_path:=install/grid_map_geo/share/grid_map_geo/resources/ap_srtm1.vrt
+-p gdal_dataset_path:=/vsizip/vsicurl/https://terrain.ardupilot.org/SRTM1/ap_srtm1.zip
 
 # To debug from the launch file
 ros2 launch grid_map_geo load_vrt_launch.xml
@@ -107,7 +107,7 @@ ros2 launch grid_map_geo load_tif.launch.py params_file:=config/sargans_color_ov
 ros2 run --prefix 'gdb -ex run --args' grid_map_geo map_publisher --ros-args --params-file config/sargans_color_over_srtm1.yaml
 ```
 
-These datasets are different sizes, different resultions, and use different datums.
+These datasets are different sizes, different resolutions, and use different datums.
 
 Either of these ways of launching cause a floating point crash in `grid_map::getIndexFromLinearIndex`. 
 This limitation may be addressed in a future version.
