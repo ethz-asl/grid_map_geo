@@ -30,13 +30,13 @@ jobs:
     - name: Colcon Build (Release)
       run: |
         source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
-        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to grid_map_geo
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
       shell: bash
     - name: Verify Export
       run: |
         source /opt/ros/${{matrix.config.rosdistro}}/setup.bash
         source install/setup.bash
-        cd src/grid_map_geo/test/export
+        cd src/grid_map_geo/grid_map_geo/test/export
         colcon build
         ./build/grid_map_export_test/main
       shell: bash
