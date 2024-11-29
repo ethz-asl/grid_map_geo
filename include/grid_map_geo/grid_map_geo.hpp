@@ -177,8 +177,6 @@ class GridMapGeo {
    */
   void AddLayerNormals(std::string reference_layer);
 
-  geometry_msgs::msg::TransformStamped static_transformStamped_;
-
  protected:
   grid_map::GridMap grid_map_;
   Location maporigin_;
