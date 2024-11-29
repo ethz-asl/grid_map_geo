@@ -1,0 +1,21 @@
+<launch>
+    <arg name="rviz" default="false"/>
+
+    <!-- Default CMAC https://maps.app.goo.gl/NXJ9JC23oskMDaEx8-->
+    <arg name="map_origin_latitude" default="-35.363266"/>
+    <arg name="map_origin_longitude" default="149.165199"/>
+
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="world_map" args="--frame-id world --child-frame-id map"/>
+
+    <node pkg="grid_map_geo" exec="map_publisher" name="map_publisher" output="screen"> 
+	    <param name="gdal_dataset_path" value="/vsizip/vsicurl/https://terrain.ardupilot.org/SRTM1/ap_srtm1.zip"/>
+        <param name="map_origin_latitude" value="$(var map_origin_latitude)"/>
+        <param name="map_origin_longitude" value="$(var map_origin_longitude)"/>
+        <param name="max_map_width" value="4096"/>
+        <param name="max_map_height" value="4096"/>
+    </node>
+
+    <group if="$(var rviz)">
+        <node exec="rviz2" name="rviz2" pkg="rviz2" args="-d $(find-pkg-share grid_map_geo)/rviz/config.rviz"/>
+    </group>
+</launch>

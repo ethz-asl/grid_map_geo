@@ -4,7 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, LaunchConfigurationEquals, LaunchConfigurationNotEquals
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
@@ -28,18 +28,31 @@ def generate_launch_description():
         ],
     )
 
-    # tif loader node
-    tif_loader = Node(
+    # map publisher node
+    map_publisher = Node(
         package="grid_map_geo",
         namespace="grid_map_geo",
-        executable="test_tif_loader",
-        name="tif_loader",
+        executable="map_publisher",
+        name="map_publisher",
         parameters=[
-            {"tif_path": LaunchConfiguration("tif_path")},
-            {"tif_color_path": LaunchConfiguration("tif_color_path")},
+            {"gdal_dataset_path": LaunchConfiguration("gdal_dataset_path")},
+            {"gdal_dataset_color_path": LaunchConfiguration("gdal_dataset_color_path")},
         ],
         output="screen",
         emulate_tty=True,
+        # condition=LaunchConfigurationEquals(LaunchConfiguration("params_file"), "")
+    )
+    
+    # map publisher node with params file
+    map_publisher_with_param_file = Node(
+        package="grid_map_geo",
+        namespace="grid_map_geo",
+        executable="map_publisher",
+        name="map_publisher",
+        parameters=[LaunchConfiguration("params_file")],
+        output="screen",
+        emulate_tty=True,
+        condition=LaunchConfigurationNotEquals(LaunchConfiguration("params_file"), "")
     )
 
     # rviz node
@@ -51,8 +64,8 @@ def generate_launch_description():
     )
 
     default_location = "sargans"
-    default_tif_file = "sargans.tif"
-    default_tif_color_file = "sargans_color.tif"
+    default_gdal_dataset = "sargans.tif"
+    default_gdal_color_dataset = "sargans_color.tif"
     return LaunchDescription(
         [
             DeclareLaunchArgument(
@@ -64,17 +77,26 @@ def generate_launch_description():
                 description="Location.",
             ),
             DeclareLaunchArgument(
-                "tif_path",
-                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_tif_file}',
+                "gdal_dataset_path",
+                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_gdal_dataset}',
                 description="Full path to the elevation map file.",
             ),
             DeclareLaunchArgument(
-                "tif_color_path",
-                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_tif_color_file}',
+                "gdal_dataset_color_path",
+                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_gdal_color_dataset}',
                 description="Full path to the elevation texture file.",
             ),
+            DeclareLaunchArgument(
+                "params_file",
+                default_value="",
+                description="YAML parameter file path.",
+            ),
+            
             static_transform_publisher,
-            tif_loader,
+            map_publisher,
+            # map_publisher_with_param_file,
             rviz,
         ]
     )
+    
+

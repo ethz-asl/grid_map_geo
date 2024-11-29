@@ -40,6 +40,7 @@
 #include "grid_map_geo/grid_map_geo.hpp"
 
 #include <array>
+#include <cassert>
 #include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
@@ -58,33 +59,67 @@
 #include <gdal/ogr_spatialref.h>
 #endif
 
+/**
+ * @brief Helper function for getting dataset corners
+ * Inspired by gdalinfo_lib.cpp::GDALInfoReportCorner()
+ *
+ * @param datasetPtr The pointer to the dataset
+ * @param corners The returned corners in the geographic coordinates
+ * @return
+ */
+inline bool getGeoCorners(const GDALDatasetUniquePtr &datasetPtr, Corners &corners) {
+  std::array<double, 6> geoTransform;
+
+  // https://gdal.org/tutorials/geotransforms_tut.html#introduction-to-geotransforms
+  if (!datasetPtr->GetGeoTransform(geoTransform.data()) == CE_None) {
+    return false;
+  }
+
+  const auto raster_width = datasetPtr->GetRasterXSize();
+  const auto raster_height = datasetPtr->GetRasterYSize();
+
+  corners.top_left = imageToGeo(geoTransform, {0, 0});
+  corners.top_right = imageToGeo(geoTransform, {raster_width, 0});
+  corners.bottom_left = imageToGeo(geoTransform, {0, raster_height});
+  corners.bottom_right = imageToGeo(geoTransform, {raster_width, raster_height});
+
+  return true;
+}
+
 GridMapGeo::GridMapGeo(const std::string &frame_id) { frame_id_ = frame_id; }
 
 GridMapGeo::~GridMapGeo() {}
 
-bool GridMapGeo::Load(const std::string &map_path, const std::string &color_map_path) {
-  bool loaded = initializeFromGeotiff(map_path);
-  if (!color_map_path.empty()) {  // Load color layer if the color path is nonempty
+void GridMapGeo::setMaxMapSizePixels(const int pixels_x, const int pixels_y) {
+  // Use int type to match GDAL , but validate it's a positive value.
+  assert(pixels_x >= 0);
+  assert(pixels_y >= 0);
+
+  max_raster_x_size_ = pixels_x;
+  max_raster_y_size_ = pixels_y;
+}
+
+bool GridMapGeo::Load(const std::string &map_path, const std::string color_map_path) {
+  bool loaded = initializeFromGdalDataset(map_path);
+  if (color_map_path != COLOR_MAP_DEFAULT_PATH) {  // Load color layer if the color path is nonempty
     bool color_loaded = addColorFromGeotiff(color_map_path);
   }
   if (!loaded) return false;
   return true;
 }
 
-bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
+bool GridMapGeo::initializeFromGdalDataset(const std::string &path) {
   GDALAllRegister();
   const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
-    std::cout << "Failed to open" << std::endl;
+    std::cout << __func__ << "Failed to open '" << path << "'" << std::endl;
     return false;
   }
-  std::cout << std::endl << "Loading GeoTIFF file for gridmap" << std::endl;
+  std::cout << std::endl << "Loading GDAL Dataset for gridmap" << std::endl;
 
-  double originX, originY, pixelSizeX, pixelSizeY;
+  double pixelSizeX, pixelSizeY;
   std::array<double, 6> geoTransform;
   if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
-    originX = geoTransform[0];
-    originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
     pixelSizeY = geoTransform[5];
   } else {
@@ -104,41 +139,82 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
 
   const OGRSpatialReference *spatial_ref = dataset->GetSpatialRef();
   coordinate_name_ = spatial_ref->GetAttrValue("geogcs");
+
   // Get image metadata
-  unsigned width = dataset->GetRasterXSize();
-  unsigned height = dataset->GetRasterYSize();
+  const auto raster_width = dataset->GetRasterXSize();
+  const auto raster_height = dataset->GetRasterYSize();
+
+  if (raster_width > max_raster_x_size_ || raster_height > max_raster_y_size_) {
+    std::cout << "Raster too big. Using a submap of size " << max_raster_x_size_ << "x" << max_raster_y_size_
+              << std::endl;
+  }
   double resolution = pixelSizeX;
-  std::cout << "Width: " << width << " Height: " << height << " Resolution: " << resolution << std::endl;
+  std::cout << "RasterX: " << raster_width << " RasterY: " << raster_height << " pixelSizeX: " << pixelSizeX
+            << std::endl;
+
+  // Limit grid map size to not exceed memory limitations
+  const auto grid_width = std::min(raster_width, max_raster_x_size_);
+  const auto grid_height = std::min(raster_height, max_raster_y_size_);
 
   // pixelSizeY is negative because the origin of the image is the north-east corner and positive
   // Y pixel coordinates go towards the south
-  const double lengthX = resolution * width;
-  const double lengthY = resolution * height;
+  const double lengthX = resolution * grid_width;
+  const double lengthY = resolution * grid_height;
   grid_map::Length length(lengthX, lengthY);
+  std::cout << "GMLX: " << lengthX << " GMLY: " << lengthY << std::endl;
 
-  double mapcenter_e = originX + pixelSizeX * width * 0.5;
-  double mapcenter_n = originY + pixelSizeY * height * 0.5;
-  maporigin_.espg = ESPG::CH1903_LV03;
-  maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
+  //! @todo use WGS-84 as map origin if specified
+  //! @todo
+  //! @todo check the origin point is non-void (not in the middle of the ocean)
+  Corners corners;
+  if (!getGeoCorners(dataset, corners)) {
+    std::cerr << "Failed to get geographic corners of dataset!" << std::endl;
+    return false;
+  }
+
+  if (std::isnan(maporigin_.position.x()) || std::isnan(maporigin_.position.y())) {
+    //! @todo Figure out how to not hard code the espg, perhaps using the dataset GEOGCRS attribute.
+    // maporigin_.espg = ESPG::CH1903_LV03;
+    const double mapcenter_e = (corners.top_left.x() + corners.bottom_right.x()) / 2.0;
+    const double mapcenter_n = (corners.top_left.y() + corners.bottom_right.y()) / 2.0;
+    maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
+  } else {
+    if (maporigin_.position.x() < corners.top_left.x() || maporigin_.position.x() > corners.bottom_right.x() ||
+        maporigin_.position.y() < corners.bottom_right.y() || maporigin_.position.y() > corners.top_left.y()) {
+      std::cerr << "The configured map origin is outside of raster dataset!" << std::endl;
+      return false;
+    }
+  }
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
   grid_map_.setGeometry(length, resolution, position);
   grid_map_.setFrameId(frame_id_);
   grid_map_.add("elevation");
+
+  const auto raster_count = dataset->GetRasterCount();
+  assert(raster_count == 1);  // expect only elevation data, otherwise it's the wrong dataset.
   GDALRasterBand *elevationBand = dataset->GetRasterBand(1);
 
-  std::vector<float> data(width * height, 0.0f);
-  elevationBand->RasterIO(GF_Read, 0, 0, width, height, &data[0], width, height, GDT_Float32, 0, 0);
+  // Compute the center in pixel space, then get the raster bounds nXOff and nYOff to extract with RasterIO
+  const auto center_px = geoToImageNoRot(geoTransform, {maporigin_.position.x(), maporigin_.position.y()});
+  const auto raster_io_x_offset = center_px.x() - grid_width / 2;
+  const auto raster_io_y_offset = center_px.y() - grid_height / 2;
 
+  std::vector<float> data(grid_width * grid_height, 0.0f);
+  const auto raster_err = elevationBand->RasterIO(GF_Read, raster_io_x_offset, raster_io_y_offset, grid_width,
+                                                  grid_height, &data[0], grid_width, grid_height, GDT_Float32, 0, 0);
+  if (raster_err != CPLE_None) {
+    return false;
+  }
   grid_map::Matrix &layer_elevation = grid_map_["elevation"];
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index gridMapIndex = *iterator;
     // TODO: This may be wrong if the pixelSizeY > 0
-    int x = width - 1 - gridMapIndex(0);
+    int x = grid_width - 1 - gridMapIndex(0);
     int y = gridMapIndex(1);
 
-    layer_elevation(x, y) = data[gridMapIndex(0) + width * gridMapIndex(1)];
+    layer_elevation(x, y) = data[gridMapIndex(0) + grid_width * gridMapIndex(1)];
   }
 
   return true;
@@ -148,16 +224,14 @@ bool GridMapGeo::addColorFromGeotiff(const std::string &path) {
   GDALAllRegister();
   const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
-    std::cout << "Failed to open" << std::endl;
+    std::cout << __func__ << "Failed to open '" << path << "'" << std::endl;
     return false;
   }
   std::cout << std::endl << "Loading color layer from GeoTIFF file for gridmap" << std::endl;
 
-  double originX, originY, pixelSizeX, pixelSizeY;
+  double pixelSizeX, pixelSizeY;
   std::array<double, 6> geoTransform;
   if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
-    originX = geoTransform[0];
-    originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
     pixelSizeY = geoTransform[5];
   } else {
@@ -209,16 +283,14 @@ bool GridMapGeo::addLayerFromGeotiff(const std::string &layer_name, const std::s
   GDALAllRegister();
   const auto dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(path.c_str(), GA_ReadOnly)));
   if (!dataset) {
-    std::cout << "Failed to open" << std::endl;
+    std::cout << __func__ << "Failed to open '" << path << "'" << std::endl;
     return false;
   }
   std::cout << std::endl << "Loading color layer from GeoTIFF file for gridmap" << std::endl;
 
-  double originX, originY, pixelSizeX, pixelSizeY;
+  double pixelSizeX, pixelSizeY;
   std::array<double, 6> geoTransform;
   if (dataset->GetGeoTransform(geoTransform.data()) == CE_None) {
-    originX = geoTransform[0];
-    originY = geoTransform[3];
     pixelSizeX = geoTransform[1];
     pixelSizeY = geoTransform[5];
   } else {
