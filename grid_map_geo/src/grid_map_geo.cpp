@@ -144,8 +144,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
   return true;
 }
 
-bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2d &map_center,
-                                   Eigen::Vector2d &extent) {
+bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2d &map_center, Eigen::Vector2d &extent,
+                                   rclcpp::Node::SharedPtr node_ptr) {
   GDALAllRegister();
   GDALDataset *dataset = (GDALDataset *)GDALOpen(path.c_str(), GA_ReadOnly);
   if (!dataset) {
@@ -223,10 +223,10 @@ bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2
     layer_elevation(x, y) = data[gridMapIndex(0) + grid_width * gridMapIndex(1)];
   }
 
-  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
-  geometry_msgs::TransformStamped static_transformStamped;
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster(node_ptr);
+  geometry_msgs::msg::TransformStamped static_transformStamped;
 
-  static_transformStamped.header.stamp = ros::Time::now();
+  static_transformStamped.header.stamp = node_ptr->now();
   static_transformStamped.header.frame_id = name_coordinate;
   static_transformStamped.child_frame_id = frame_id_;
   static_transformStamped.transform.translation.x = map_center(0);

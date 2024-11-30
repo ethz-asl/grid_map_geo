@@ -77,7 +77,7 @@ ros2 launch grid_map_geo load_tif_launch.xml
 
 One can load a DEM from a terrain server directly.
 ```
-roslaunch grid_map_geo run_terrain_loader.launch
+ros2 launch grid_map_geo run_terrain_loader.launch.xml
 ```
 
 ![terrain-loader](https://github.com/ethz-asl/grid_map_geo/assets/5248102/e93b2c86-c26a-477c-8704-dc0233b7ef2e)

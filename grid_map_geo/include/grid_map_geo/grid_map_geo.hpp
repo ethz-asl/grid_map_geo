@@ -34,7 +34,7 @@
 #ifndef GRID_MAP_GEO_H
 #define GRID_MAP_GEO_H
 
-#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
@@ -117,7 +117,8 @@ class GridMapGeo {
    */
   bool initializeFromGeotiff(const std::string& path);
 
-  bool initializeFromVrt(const std::string& path, const Eigen::Vector2d& map_center, Eigen::Vector2d& extent);
+  bool initializeFromVrt(const std::string& path, const Eigen::Vector2d& map_center, Eigen::Vector2d& extent,
+                         rclcpp::Node::SharedPtr node_ptr);
 
   /**
    * @brief Load a color layer from a geotiff file (orthomosaic)

@@ -37,12 +37,13 @@
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
-#include <grid_map_geo/grid_map_geo.h>
-#include <grid_map_msgs/GridMap.h>
-#include <ros/ros.h>
-#include <grid_map_ros/GridMapRosConverter.hpp>
-
+#include <gdal/ogr_geometry.h>
 #include <gdal/ogr_spatialref.h>
+
+#include <grid_map_geo/grid_map_geo.hpp>
+#include <grid_map_msgs/msg/grid_map.hpp>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 constexpr int ESPG_WGS84 = 4326;
 constexpr int ESPG_CH1903_LV03 = 21781;
@@ -67,7 +68,7 @@ void transformCoordinates(int src_coord, const double &x, const double &y, const
 }
 
 void LoadTerrainFromVrt(std::string path, const Eigen::Vector3d &query_position, const Eigen::Vector2d &offset,
-                        grid_map::GridMap &map, grid_map::GridMap &vrt_map_object) {
+                        grid_map::GridMap &map, grid_map::GridMap &vrt_map_object, rclcpp::Node::SharedPtr node_ptr) {
   std::shared_ptr<GridMapGeo> vrt_map = std::make_shared<GridMapGeo>();
 
   Eigen::Vector3d query_position_lv03 = query_position;
@@ -80,7 +81,7 @@ void LoadTerrainFromVrt(std::string path, const Eigen::Vector3d &query_position,
   std::cout << "  - map_center_wgs84:" << map_center_wgs84.transpose() << std::endl;
   /// TODO: Discover extent from corners
   Eigen::Vector2d extent_wgs84(0.5, 0.5);
-  vrt_map->initializeFromVrt(path, map_center_wgs84.head(2), extent_wgs84);
+  vrt_map->initializeFromVrt(path, map_center_wgs84.head(2), extent_wgs84, node_ptr);
   std::cout << "  - Success!" << std::endl;
 
   /// TODO: Loaded VRT map
@@ -115,15 +116,13 @@ void LoadTerrainFromVrt(std::string path, const Eigen::Vector3d &query_position,
 }
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "terrain_loader");
-  ros::NodeHandle nh("");
-  ros::NodeHandle nh_private("~");
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("terrain_loader");
 
-  ros::Publisher map_pub = nh.advertise<grid_map_msgs::GridMap>("grid_map", 1, true);
-  ros::Publisher map_pub2 = nh.advertise<grid_map_msgs::GridMap>("grid_map2", 1, true);
+  auto map_pub = node->create_publisher<grid_map_msgs::msg::GridMap>("grid_map", rclcpp::QoS(1).transient_local());
+  auto map_pub2 = node->create_publisher<grid_map_msgs::msg::GridMap>("grid_map2", rclcpp::QoS(1).transient_local());
 
-  std::string path;
-  nh_private.param<std::string>("terrain_path", path, "resources/cadastre.tif");
+  auto const path = node->declare_parameter("terrain_path", "resources/cadastre.tif");
 
   Eigen::Vector3d test_position = Eigen::Vector3d(783199.15, 187585.10, 0.0);
 
@@ -133,18 +132,22 @@ int main(int argc, char **argv) {
 
     grid_map::GridMap map;
     grid_map::GridMap vrt_map;
-    LoadTerrainFromVrt(path, query_position, offset.head(2), map, vrt_map);
+    LoadTerrainFromVrt(path, query_position, offset.head(2), map, vrt_map, node);
     std::cout << "i: " << i << " offset: " << offset.transpose() << std::endl;
 
-    grid_map_msgs::GridMap msg;
-    grid_map::GridMapRosConverter::toMessage(map, msg);
-    map_pub.publish(msg);
+    // grid_map_msgs::msg::GridMap msg;
+    auto msg = grid_map::GridMapRosConverter::toMessage(map);
+    if (msg) {
+      map_pub->publish(std::move(msg));
+    }
 
-    grid_map_msgs::GridMap msg2;
-    grid_map::GridMapRosConverter::toMessage(vrt_map, msg2);
-    map_pub2.publish(msg2);
+    auto msg2 = grid_map::GridMapRosConverter::toMessage(vrt_map);
+    if (msg2) {
+      map_pub2->publish(std::move(msg2));
+    }
   }
 
-  ros::spin();
+  rclcpp::spin(node);
+  rclcpp::shutdown();
   return 0;
 }

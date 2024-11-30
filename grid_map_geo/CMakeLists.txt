@@ -96,7 +96,8 @@ ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_msgs grid_map_ros t
 
 install(
   TARGETS
-  test_tif_loader
+    test_tif_loader
+    terrain_loader
   DESTINATION lib/${PROJECT_NAME}
 )
 
