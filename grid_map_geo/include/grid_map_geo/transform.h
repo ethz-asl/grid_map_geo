@@ -41,7 +41,7 @@
 
 #include <Eigen/Dense>
 
-enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781 };
+enum class EPSG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781, AT_GK_WEST = 31254 };
 
 /**
  * @brief Helper function for transforming using gdal
@@ -51,7 +51,7 @@ enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21
  * @param source_coordinates
  * @return Eigen::Vector3d
  */
-inline Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates) {
+inline Eigen::Vector3d transformCoordinates(EPSG src_coord, EPSG tgt_coord, const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
   source.importFromEPSG(static_cast<int>(src_coord));
   target.importFromEPSG(static_cast<int>(tgt_coord));
@@ -75,7 +75,7 @@ inline Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, cons
  * @param source_coordinates
  * @return Eigen::Vector3d
  */
-inline Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt,
+inline Eigen::Vector3d transformCoordinates(EPSG src_coord, const std::string wkt,
                                             const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
   char* wkt_string = const_cast<char*>(wkt.c_str());

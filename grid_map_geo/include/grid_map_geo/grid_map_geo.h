@@ -46,7 +46,7 @@
 #include <gdal/ogr_spatialref.h>
 #include <iostream>
 struct Location {
-  ESPG espg{ESPG::WGS84};
+  EPSG epsg{EPSG::WGS84};
   Eigen::Vector3d position{Eigen::Vector3d::Zero()};
 };
 
@@ -75,7 +75,7 @@ class GridMapGeo {
    * @param src_coord
    * @param origin
    */
-  void setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin);
+  void setGlobalOrigin(EPSG src_coord, const Eigen::Vector3d origin);
 
   /**
    * @brief Get the Global Origin object
@@ -83,8 +83,8 @@ class GridMapGeo {
    * @param src_coord
    * @param origin
    */
-  void getGlobalOrigin(ESPG& src_coord, Eigen::Vector3d& origin) {
-    src_coord = maporigin_.espg;
+  void getGlobalOrigin(EPSG& src_coord, Eigen::Vector3d& origin) {
+    src_coord = maporigin_.epsg;
     origin = maporigin_.position;
   };
 

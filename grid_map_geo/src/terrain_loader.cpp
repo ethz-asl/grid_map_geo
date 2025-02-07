@@ -44,8 +44,8 @@
 
 #include <gdal/ogr_spatialref.h>
 
-constexpr int ESPG_WGS84 = 4326;
-constexpr int ESPG_CH1903_LV03 = 21781;
+constexpr int EPSG_WGS84 = 4326;
+constexpr int EPSG_CH1903_LV03 = 21781;
 
 void transformCoordinates(int src_coord, const double &x, const double &y, const double &z, int tgt_coord, double &x_t,
                           double &y_t, double &z_t) {
@@ -73,8 +73,8 @@ void LoadTerrainFromVrt(std::string path, const Eigen::Vector3d &query_position,
   Eigen::Vector3d query_position_lv03 = query_position;
   /// Convert LV03 to WGS84
   Eigen::Vector3d map_center_wgs84;  // Map center in WGS84
-  transformCoordinates(ESPG_CH1903_LV03, query_position_lv03(0), query_position_lv03(1), query_position_lv03(2),
-                       ESPG_WGS84, map_center_wgs84.x(), map_center_wgs84.y(), map_center_wgs84.z());
+  transformCoordinates(EPSG_CH1903_LV03, query_position_lv03(0), query_position_lv03(1), query_position_lv03(2),
+                       EPSG_WGS84, map_center_wgs84.x(), map_center_wgs84.y(), map_center_wgs84.z());
 
   std::cout << "Loading VRT Map:" << std::endl;
   std::cout << "  - map_center_wgs84:" << map_center_wgs84.transpose() << std::endl;
@@ -98,8 +98,8 @@ void LoadTerrainFromVrt(std::string path, const Eigen::Vector3d &query_position,
     auto cell_position_lv03 = cell_position + query_position_lv03.head(2);  // Position of cell in CH1903/LV03
     double dummy;
     Eigen::Vector2d cell_position_wgs84;
-    transformCoordinates(ESPG_CH1903_LV03, cell_position_lv03(0), cell_position_lv03(1), cell_position_lv03(2),
-                         ESPG_WGS84, cell_position_wgs84.x(), cell_position_wgs84.y(), dummy);
+    transformCoordinates(EPSG_CH1903_LV03, cell_position_lv03(0), cell_position_lv03(1), cell_position_lv03(2),
+                         EPSG_WGS84, cell_position_wgs84.x(), cell_position_wgs84.y(), dummy);
     // std::cout << "    - cell_position_wgs84:" << cell_position_wgs84.transpose() << std::endl;
 
     Eigen::Vector2d local_wgs84 = cell_position_wgs84 - map_center_wgs84.head(2);
