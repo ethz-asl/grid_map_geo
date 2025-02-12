@@ -99,9 +99,8 @@ bool GridMapGeo::initializeFromGeotiff(const std::string &path) {
 
   double mapcenter_e = originX + pixelSizeX * width * 0.5;
   double mapcenter_n = originY + pixelSizeY * height * 0.5;
-  maporigin_.espg = ESPG::CH1903_LV03;
   maporigin_.position = Eigen::Vector3d(mapcenter_e, mapcenter_n, 0.0);
-
+  maporigin_.epsg = static_cast<EPSG>(std::stoi(spatial_ref->GetAttrValue("AUTHORITY", 1)));
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
 
   grid_map_.setGeometry(length, resolution, position);
@@ -184,7 +183,7 @@ bool GridMapGeo::initializeFromVrt(const std::string &path, const Eigen::Vector2
   grid_map::Length length(lengthX, lengthY);
   std::cout << "length: " << length.transpose() << std::endl;
 
-  maporigin_.espg = static_cast<ESPG>(std::stoi(epsg_code));
+  maporigin_.epsg = static_cast<EPSG>(std::stoi(epsg_code));
   maporigin_.position = map_center.head(2);
 
   Eigen::Vector2d position{Eigen::Vector2d::Zero()};
@@ -414,9 +413,9 @@ bool GridMapGeo::AddLayerOffset(const double offset_distance, const std::string 
   return true;
 }
 
-void GridMapGeo::setGlobalOrigin(ESPG src_coord, const Eigen::Vector3d origin) {
+void GridMapGeo::setGlobalOrigin(EPSG src_coord, const Eigen::Vector3d origin) {
   // Transform global origin into CH1903 / LV03 coordinates
-  maporigin_.espg = src_coord;
+  maporigin_.epsg = src_coord;
   maporigin_.position = origin;
 }
 
