@@ -4,7 +4,7 @@
 std_msgs/Header header
 
 
-# ESPG of the coordinate the map is in
+# EPSG of the coordinate the map is in
 uint16 geo_coordinate
 
 # Size of the map in pixels

@@ -45,7 +45,7 @@
 #include <gdal/ogr_spatialref.h>
 #endif
 
-Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates) {
+Eigen::Vector3d transformCoordinates(EPSG src_coord, EPSG tgt_coord, const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
   source.importFromEPSG(static_cast<int>(src_coord));
   target.importFromEPSG(static_cast<int>(tgt_coord));
@@ -61,7 +61,7 @@ Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen
   return target_coordinates;
 }
 
-Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates) {
+Eigen::Vector3d transformCoordinates(EPSG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates) {
   OGRSpatialReference source, target;
   char* wkt_string = const_cast<char*>(wkt.c_str());
   source.importFromEPSG(static_cast<int>(src_coord));
