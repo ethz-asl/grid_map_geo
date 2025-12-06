@@ -36,7 +36,7 @@
 
 #include <Eigen/Dense>
 
-enum class EPSG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781 };
+enum class EPSG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781, WGS84_10N = 32610 };
 
 /**
  * @brief Helper function for transforming using gdal
