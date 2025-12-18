@@ -285,6 +285,19 @@ bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const 
   return true;
 }
 
+bool GridMapGeo::AddLayerOffsetTransform(const double surface_distance, const std::string &layer_name,
+  std::string reference_layer) {
+  grid_map_.add(layer_name);
+
+  for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index MapIndex = *iterator;
+    Eigen::Vector3d center_pos;
+    grid_map_.getPosition3(reference_layer, MapIndex, center_pos);
+    grid_map_.at(layer_name, MapIndex) = center_pos(2) + surface_distance;
+  }
+  return true;
+}
+
 bool GridMapGeo::AddLayerHorizontalDistanceTransform(const double surface_distance, const std::string &layer_name,
                                                      std::string reference_layer) {
   grid_map_.add(layer_name);
