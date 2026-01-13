@@ -36,7 +36,7 @@
 
 #include <Eigen/Dense>
 
-enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781 };
+enum class EPSG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21781, WGS84_10N = 32610 };
 
 /**
  * @brief Helper function for transforming using gdal
@@ -46,7 +46,7 @@ enum class ESPG { ECEF = 4978, WGS84 = 4326, WGS84_32N = 32632, CH1903_LV03 = 21
  * @param source_coordinates
  * @return Eigen::Vector3d
  */
-Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen::Vector3d source_coordinates);
+Eigen::Vector3d transformCoordinates(EPSG src_coord, EPSG tgt_coord, const Eigen::Vector3d source_coordinates);
 
 /**
  * @brief Helper function for transforming using gdal
@@ -56,6 +56,6 @@ Eigen::Vector3d transformCoordinates(ESPG src_coord, ESPG tgt_coord, const Eigen
  * @param source_coordinates
  * @return Eigen::Vector3d
  */
-Eigen::Vector3d transformCoordinates(ESPG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates);
+Eigen::Vector3d transformCoordinates(EPSG src_coord, const std::string wkt, const Eigen::Vector3d source_coordinates);
 
 #endif  // GRID_MAP_GEO_TRANSFORM_H

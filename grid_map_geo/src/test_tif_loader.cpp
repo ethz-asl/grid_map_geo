@@ -72,7 +72,7 @@ class MapPublisher : public rclcpp::Node {
       }
     };
     timer_ = this->create_wall_timer(5s, timer_callback);
-    ESPG epsg;
+    EPSG epsg;
     Eigen::Vector3d map_origin;
     map_->getGlobalOrigin(epsg, map_origin);
 
