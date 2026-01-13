@@ -286,7 +286,7 @@ bool GridMapGeo::AddLayerDistanceTransform(const double surface_distance, const 
 }
 
 bool GridMapGeo::AddLayerOffsetTransform(const double surface_distance, const std::string &layer_name,
-  std::string reference_layer) {
+                                         std::string reference_layer) {
   grid_map_.add(layer_name);
 
   for (grid_map::GridMapIterator iterator(grid_map_); !iterator.isPastEnd(); ++iterator) {

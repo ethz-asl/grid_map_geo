@@ -157,7 +157,8 @@ class GridMapGeo {
    * @return false
    */
 
-  bool AddLayerOffsetTransform(const double surface_distance, const std::string &layer_name, std::string reference_layer = "elevation");
+  bool AddLayerOffsetTransform(const double surface_distance, const std::string& layer_name,
+                               std::string reference_layer = "elevation");
 
   /**
    * @brief Add layer using distance transform
