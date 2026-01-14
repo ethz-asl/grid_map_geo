@@ -59,6 +59,14 @@ target_link_libraries(test_tif_loader PUBLIC
   ${PROJECT_NAME}
 )
 
+add_executable(terrain_loader
+  src/terrain_loader.cpp
+)
+
+target_link_libraries(terrain_loader PUBLIC
+  ${PROJECT_NAME}
+)
+
 # Fix for yaml_cpp not resolving correctly on macOS
 # https://github.com/ethz-asl/grid_map_geo/pull/59#discussion_r1474669370
 if (APPLE)
@@ -88,7 +96,8 @@ ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_msgs grid_map_ros t
 
 install(
   TARGETS
-  test_tif_loader
+    test_tif_loader
+    terrain_loader
   DESTINATION lib/${PROJECT_NAME}
 )
 
