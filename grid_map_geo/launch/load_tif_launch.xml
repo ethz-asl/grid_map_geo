@@ -4,8 +4,8 @@
     <node pkg="tf2_ros" exec="static_transform_publisher" name="world_map" args="--frame-id world --child-frame-id map"/>
 
     <node pkg="grid_map_geo" exec="test_tif_loader" name="test_tif_loader" namespace="grid_map_geo" output="screen">
-        <param name="tif_path" value="$(find-pkg-share grid_map_geo)/resources/sargans.tif"/>
-        <param name="tif_color_path" value="$(find-pkg-share grid_map_geo)/resources/sargans_color.tif"/>
+        <param name="tif_path" value="$(find-pkg-share terrain_navigation_ros)/resources/sacramento.tif"/>
+        <param name="tif_color_path" value="$(find-pkg-share terrain_navigation_ros)/resources/sacramento_color.tif"/>
     </node>
 
     <group if="$(var rviz)">
