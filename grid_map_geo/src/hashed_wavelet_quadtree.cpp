@@ -1,228 +1,264 @@
 #include "grid_map_geo/hashed_wavelet_quadtree.hpp"
 
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
+#include <unordered_map>
 #include <utility>
 
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-#include <wavemap/core/data_structure/chunked_ndtree/chunked_ndtree.h>
-#include <wavemap/core/data_structure/spatial_hash.h>
-#include <wavemap/core/indexing/index_conversions.h>
-#include <wavemap/core/map/cell_types/haar_coefficients.h>
-#include <wavemap/core/map/cell_types/haar_transform.h>
-#include <wavemap/core/utils/math/int_math.h>
-
-// This file instantiates wavemap's (ethz-asl/wavemap) generic, dim/value-
-// templated wavelet-tree primitives at dim=2 with a plain float value, to
-// get a "wavelet quadtree" for 2.5D elevation data. It deliberately mirrors
-// wavemap's own dim=3 HashedChunkedWaveletOctree/HashedChunkedWaveletOctreeBlock
-// classes (library/cpp/include/wavemap/core/map/hashed_chunked_wavelet_octree*.h)
-// rather than wavemap's public map classes, which fix dim=3 and occupancy
-// log-odds semantics that don't apply to elevation.
+// Self-contained 2D Haar-wavelet hashed-block-sparse quadtree: no external
+// tree library. Each hashed block is a fixed-height (`tree_height`) quadtree
+// whose nodes live in one pooled `std::vector<Node>` per block, addressed by
+// `int32_t` index rather than pointer -- this avoids the per-node
+// malloc/free overhead of a naive pointer tree (measured at ~2.7x a dense
+// float array's memory on real terrain in an earlier prototype of this
+// class), while still collapsing whole subtrees of locally-uniform terrain
+// to nothing via prune().
 //
-// Deliberately the *chunked* tree variant, not the plain per-node-heap-
-// allocated Ndtree used in an earlier version of this file: a plain Ndtree
-// allocates one heap object per tree node (payload + a child-array pointer),
-// which costs more memory than a dense array whenever a region has little
-// local redundancy to prune away (confirmed on real terrain: it used ~2.7x
-// a dense float array's memory). ChunkedNdtree instead packs several tree
-// levels' worth of nodes into one contiguous array per chunk, amortizing
-// that per-node bookkeeping -- wavemap's own docs recommend it as the best
-// variant for both speed and RAM usage.
+// IMPORTANT invariant for anyone touching Block's node-pool code: never hold
+// a Node&/Node* across a `nodes_.push_back()` (or emplace_back) -- vector
+// reallocation invalidates it. Every access re-indexes `nodes_[i]` fresh.
 
 namespace {
 
-constexpr int kDim = 2;
-// Number of tree levels packed into each contiguous chunk allocation.
-// Matches wavemap's own default for its (dim=3) HashedChunkedWaveletOctree;
-// we have no profiling data suggesting a different value is better for
-// dim=2, so we keep it rather than introduce an untuned free parameter.
-constexpr int kChunkHeight = 3;
+// Child order: 0=(x=0,y=0) 1=(x=1,y=0) 2=(x=0,y=1) 3=(x=1,y=1).
+struct Node {
+  std::array<float, 3> detail{0.f, 0.f, 0.f};    // {horizontal, vertical, diagonal}
+  std::array<int32_t, 4> child{-1, -1, -1, -1};  // index into the block's node pool, -1 = none
+};
 
-using wavemap::FloatingPoint;
-using QuadtreeIndex = wavemap::NdtreeIndex<kDim>;
-using Coefficients = wavemap::HaarCoefficients<FloatingPoint, kDim>;
-using Transform = wavemap::HaarTransform<FloatingPoint, kDim>;
-using QuadtreeType = wavemap::ChunkedQuadtree<Coefficients::Details, kChunkHeight>;
-using Index2D = wavemap::Index2D;
-using Point2D = wavemap::Point2D;
+// 2D Haar transform, used only in its single-child forms below (a full
+// 4-children<->{scale,detail} round trip is never needed: queries only ever
+// walk one child at a time root->leaf, and updates inject a delta at one
+// leaf and propagate it leaf->root). The transform is exactly invertible;
+// if all 4 children of a node are equal, all 3 detail coefficients are
+// exactly zero in IEEE-754 (equal-value subtraction, then division by a
+// power of two -- neither step rounds), which is the actual mechanism that
+// lets prune() collapse whole subtrees of locally-uniform terrain.
+//
+// Backward: reconstruct just one child's value from its parent's scale +
+// detail.
+float haarBackwardSingleChild(float scale, const std::array<float, 3>& detail, int child_index) {
+  const float sx = (child_index & 1) ? -1.0f : 1.0f;
+  const float sy = (child_index & 2) ? -1.0f : 1.0f;
+  return scale + sx * detail[0] + sy * detail[1] + sx * sy * detail[2];
+}
 
-// Mirrors wavemap::HashedChunkedWaveletOctreeBlock, at dim=2, without the
-// occupancy-specific min/max log-odds clamping (elevation has no natural
-// bound to clamp values to).
-class QuadtreeBlock {
+// Forward transform of a delta applied to only one child (others held at 0),
+// i.e. the {scale, detail} contribution that `delta` at `child_index` alone
+// injects into its parent -- by linearity, `+=`-ing this into an existing
+// node's data (and propagating `scale_delta` up as the next level's input)
+// correctly reflects "this one leaf changed by delta", leaving all siblings
+// under every ancestor exactly unchanged.
+void haarForwardSingleChild(float delta, int child_index, float& scale_delta, std::array<float, 3>& detail_delta) {
+  const float sx = (child_index & 1) ? -1.0f : 1.0f;
+  const float sy = (child_index & 2) ? -1.0f : 1.0f;
+  scale_delta = delta * 0.25f;
+  detail_delta[0] = sx * delta * 0.25f;
+  detail_delta[1] = sy * delta * 0.25f;
+  detail_delta[2] = sx * sy * delta * 0.25f;
+}
+
+// Detail coefficients below this magnitude are treated as exactly zero by
+// threshold(), which is what lets prune() collapse a subtree that is
+// uniform up to floating-point noise, not just bit-exactly uniform.
+constexpr float kDetailEpsilon = 1e-3f;
+
+// One hashed block: a fixed-height (tree_height) 2D Haar wavelet quadtree,
+// backed by a pooled, index-addressed node array.
+class Block {
  public:
-  explicit QuadtreeBlock(int tree_height)
-      : tree_height_(tree_height), ndtree_(tree_height_ - 1) {}
+  explicit Block(int tree_height) : tree_height_(tree_height) {}
 
-  bool empty() const {
-    return !ndtree_.getRootNode().hasAtLeastOneChild() &&
-          !ndtree_.getRootNode().hasNonzeroData();
-  }
-  size_t size() const { return ndtree_.size(); }
-  size_t getMemoryUsage() const { return ndtree_.getMemoryUsage(); }
-
-  FloatingPoint getCellValue(const QuadtreeIndex& index) const {
-    const wavemap::MortonIndex morton_code =
-        wavemap::convert::nodeIndexToMorton(index);
-    QuadtreeType::NodeConstPtrType node = &ndtree_.getRootNode();
-    FloatingPoint value = root_scale_coefficient_;
-    for (int parent_height = tree_height_; node && index.height < parent_height;
-        --parent_height) {
-      const wavemap::NdtreeIndexRelativeChild child_index =
-          QuadtreeIndex::computeRelativeChildIndex(morton_code, parent_height);
-      value = Transform::backwardSingleChild({value, node->data()}, child_index);
-      node = node->getChild(child_index);
+  float getCellValue(int ix, int iy, int height) const {
+    const int depth = tree_height_ - height;
+    float scale = root_scale_;
+    int32_t node_index = root_index_;
+    for (int level = 1; level <= depth && node_index >= 0; ++level) {
+      const int bit = tree_height_ - level;
+      const int child_index = ((ix >> bit) & 1) | (((iy >> bit) & 1) << 1);
+      const Node& node = nodes_[node_index];
+      scale = haarBackwardSingleChild(scale, node.detail, child_index);
+      node_index = node.child[child_index];
     }
-    return value;
+    return scale;
   }
 
-  // NOTE: wavemap's own *SetCellValue (which this class otherwise mirrors)
-  // computes its injected delta relative to the reconstructed value one
-  // level *above* the target leaf (its immediate parent's own scale
-  // coefficient), not the leaf's own current value. That is only equivalent
-  // to "overwrite this leaf's value" on a leaf that has never been touched
-  // before (both happen to be zero); on a second set/overwrite of the same
-  // leaf it produces the wrong result, verified both in this port and in
-  // wavemap's own unmodified dim=3 classes (plain and chunked). Since our
-  // use case (absolute overwrite for Kalman-fused elevation) genuinely
-  // needs repeated overwrites of the same cell to behave correctly,
-  // implement setCellValue directly in terms of the (already exact)
-  // addToCellValue: read the leaf's true current value via getCellValue(),
-  // then inject exactly the delta needed.
-  void setCellValue(const QuadtreeIndex& index, FloatingPoint new_value) {
-    addToCellValue(index, new_value - getCellValue(index));
-  }
-
-  void addToCellValue(const QuadtreeIndex& index, FloatingPoint update) {
-    setNeedsPruning();
-    setNeedsThresholding();
-    const wavemap::MortonIndex morton_code =
-        wavemap::convert::nodeIndexToMorton(index);
-    std::vector<QuadtreeType::NodeRefType> ancestors;
-    const int height_difference = tree_height_ - index.height;
-    ancestors.reserve(height_difference);
-    ancestors.emplace_back(ndtree_.getRootNode());
-    for (int parent_height = tree_height_; index.height + 1 < parent_height;
-        --parent_height) {
-      const wavemap::NdtreeIndexRelativeChild child_index =
-          QuadtreeIndex::computeRelativeChildIndex(morton_code, parent_height);
-      QuadtreeType::NodeRefType current_parent = ancestors.back();
-      QuadtreeType::NodeRefType child =
-          current_parent.getOrAllocateChild(child_index);
-      ancestors.emplace_back(child);
+  // Adds `delta` to the finest-resolution (leaf) cell (ix, iy), allocating
+  // ancestor nodes as needed. O(tree_height).
+  void addToCellValue(int ix, int iy, float delta) {
+    // Pass 1: walk root -> leaf, allocating any missing ancestor nodes.
+    // Every lookup below re-indexes nodes_[...] fresh (never caches a
+    // reference across an allocation) -- see the file-level comment.
+    // Fixed-size (not std::vector) to keep this hot path allocation-free;
+    // 64 is enormous headroom over any realistic tree_height (a handful of
+    // levels -- 2^64 leaf cells per block side is not a real map).
+    std::array<int32_t, 64> path{};
+    int32_t parent_index = -1;       // -1 sentinel: "parent is the block root"
+    int parent_child_index = -1;
+    for (int level = 1; level <= tree_height_; ++level) {
+      int32_t node_index = (parent_index < 0) ? root_index_ : nodes_[parent_index].child[parent_child_index];
+      if (node_index < 0) {
+        node_index = static_cast<int32_t>(nodes_.size());
+        nodes_.emplace_back();
+        if (parent_index < 0) {
+          root_index_ = node_index;
+        } else {
+          nodes_[parent_index].child[parent_child_index] = node_index;
+        }
+      }
+      path[level - 1] = node_index;
+      const int bit = tree_height_ - level;
+      parent_child_index = ((ix >> bit) & 1) | (((iy >> bit) & 1) << 1);
+      parent_index = node_index;
     }
 
-    Coefficients::Parent coefficients{update, {}};
-    for (int parent_height = index.height + 1; parent_height <= tree_height_;
-        ++parent_height) {
-      QuadtreeType::NodeRefType current_node = ancestors.back();
-      ancestors.pop_back();
-      const wavemap::NdtreeIndexRelativeChild child_index =
-          QuadtreeIndex::computeRelativeChildIndex(morton_code, parent_height);
-      coefficients =
-          Transform::forwardSingleChild(coefficients.scale, child_index);
-      current_node.data() += coefficients.details;
+    // Pass 2: propagate `delta` bottom-up, leaf to root. No allocation
+    // happens here, so caching nodes_[path[..]] per iteration is safe.
+    float running_delta = delta;
+    for (int level = tree_height_; level >= 1; --level) {
+      const int bit = tree_height_ - level;
+      const int child_index = ((ix >> bit) & 1) | (((iy >> bit) & 1) << 1);
+      float scale_delta;
+      std::array<float, 3> detail_delta;
+      haarForwardSingleChild(running_delta, child_index, scale_delta, detail_delta);
+      Node& node = nodes_[path[level - 1]];
+      node.detail[0] += detail_delta[0];
+      node.detail[1] += detail_delta[1];
+      node.detail[2] += detail_delta[2];
+      running_delta = scale_delta;
     }
-    root_scale_coefficient_ += coefficients.scale;
+    root_scale_ += running_delta;
+    needs_threshold_ = true;
+    needs_prune_ = true;
   }
 
   void threshold() {
-    if (needs_thresholding_) {
-      recursiveThreshold(ndtree_.getRootNode(), root_scale_coefficient_);
-      needs_thresholding_ = false;
+    if (!needs_threshold_) return;
+    for (Node& node : nodes_) {
+      for (float& d : node.detail) {
+        if (std::abs(d) < kDetailEpsilon) d = 0.0f;
+      }
     }
+    needs_threshold_ = false;
   }
 
   void prune() {
-    if (needs_pruning_) {
-      threshold();
-      recursivePrune(ndtree_.getRootNode());
-      needs_pruning_ = false;
-    }
+    if (!needs_prune_) return;
+    threshold();
+    // Deliberately no `.reserve(nodes_.size())` here: that would reserve
+    // capacity for the OLD (pre-compaction, possibly fully-dense) node
+    // count, and std::vector never shrinks capacity back down on its own --
+    // for a block that collapses from e.g. 1365 nodes down to 0, that
+    // leaves ~38KB of permanently-unshrinkable dead capacity behind. Let
+    // `compacted` grow organically to its true (small, post-compaction)
+    // size instead, then shrink_to_fit() to drop any geometric-growth
+    // overshoot before it becomes nodes_'s new (permanent) buffer.
+    std::vector<Node> compacted;
+    root_index_ = compactSubtree(root_index_, compacted);
+    compacted.shrink_to_fit();
+    nodes_.swap(compacted);
+    needs_prune_ = false;
   }
 
-  int treeHeight() const { return tree_height_; }
-  Coefficients::Scale& rootScale() { return root_scale_coefficient_; }
-  const Coefficients::Scale& rootScale() const { return root_scale_coefficient_; }
-  QuadtreeType::NodeRefType rootNode() { return ndtree_.getRootNode(); }
-  QuadtreeType::NodeConstRefType rootNode() const { return ndtree_.getRootNode(); }
+  // Reports capacity(), not size(): size() alone would hide any future
+  // regression where a vector's actual (resident) buffer ends up larger
+  // than its logical contents -- see the capacity-shrinking note in
+  // prune() above, which is exactly the bug this would otherwise mask.
+  size_t getMemoryUsage() const { return sizeof(Block) + nodes_.capacity() * sizeof(Node); }
+  bool hasAnyNode() const { return root_index_ >= 0; }
+
+  float rootScale() const { return root_scale_; }
+  void setRootScale(float v) { root_scale_ = v; }
+  int32_t rootIndex() const { return root_index_; }
+  void setRootIndex(int32_t idx) { root_index_ = idx; }
+  const std::vector<Node>& nodes() const { return nodes_; }
+  std::vector<Node>& nodesMutable() { return nodes_; }
 
  private:
   int tree_height_;
-  QuadtreeType ndtree_;
-  Coefficients::Scale root_scale_coefficient_{0.f};
-  bool needs_pruning_ = false;
-  bool needs_thresholding_ = false;
+  float root_scale_ = 0.f;
+  int32_t root_index_ = -1;
+  std::vector<Node> nodes_;
+  bool needs_threshold_ = false;
+  bool needs_prune_ = false;
 
-  void setNeedsPruning() { needs_pruning_ = true; }
-  void setNeedsThresholding() { needs_thresholding_ = true; }
-
-  static void recursiveThreshold(QuadtreeType::NodeRefType node,
-                                 FloatingPoint& node_scale_coefficient) {
-    auto& node_detail_coefficients = node.data();
-    Coefficients::CoefficientsArray child_scale_coefficients =
-        Transform::backward({node_scale_coefficient, node_detail_coefficients});
-    for (int child_idx = 0; child_idx < QuadtreeIndex::kNumChildren;
-        ++child_idx) {
-      if (auto child_node = node.getChild(child_idx); child_node) {
-        recursiveThreshold(*child_node, child_scale_coefficients[child_idx]);
-      }
-      // No clamping step here: unlike occupancy log-odds, elevation has no
-      // natural bound. Thresholding is purely about re-compressing the
-      // detail coefficients below, not about clamping values.
+  // Post-order compaction of the subtree rooted at `old_index` (an index
+  // into the OLD `nodes_`, untouched until prune() swaps it out at the end)
+  // into `out`. Returns the subtree's new index in `out`, or -1 if it
+  // collapsed entirely (no children and exactly-zero detail).
+  int32_t compactSubtree(int32_t old_index, std::vector<Node>& out) const {
+    if (old_index < 0) return -1;
+    Node node = nodes_[old_index];
+    bool has_child = false;
+    for (int i = 0; i < 4; ++i) {
+      node.child[i] = compactSubtree(node.child[i], out);
+      if (node.child[i] >= 0) has_child = true;
     }
-    const auto forward_result = Transform::forward(child_scale_coefficients);
-    node_detail_coefficients = forward_result.details;
-    node_scale_coefficient = forward_result.scale;
-  }
-
-  static void recursivePrune(QuadtreeType::NodeRefType node) {
-    bool has_at_least_one_child = false;
-    for (int child_idx = 0; child_idx < QuadtreeIndex::kNumChildren;
-        ++child_idx) {
-      if (auto child_node = node.getChild(child_idx); child_node) {
-        recursivePrune(*child_node);
-        if (!child_node->hasAtLeastOneChild() &&
-            !child_node->hasNonzeroData(1e-3f)) {
-          node.eraseChild(child_idx);
-        } else {
-          has_at_least_one_child = true;
-        }
-      }
+    const bool has_nonzero_detail = node.detail[0] != 0.f || node.detail[1] != 0.f || node.detail[2] != 0.f;
+    if (!has_child && !has_nonzero_detail) {
+      return -1;
     }
-    node.hasAtLeastOneChild() = has_at_least_one_child;
+    out.push_back(node);
+    return static_cast<int32_t>(out.size()) - 1;
   }
 };
 
-void writeNode(std::ostream& os, QuadtreeType::NodeConstRefType node) {
-  uint8_t child_mask = 0;
-  for (int i = 0; i < QuadtreeIndex::kNumChildren; ++i) {
-    if (node.hasChild(i)) child_mask |= static_cast<uint8_t>(1u << i);
+void writeNode(std::ostream& os, const std::vector<Node>& nodes, int32_t index) {
+  const Node& node = nodes[index];
+  uint8_t mask = 0;
+  for (int i = 0; i < 4; ++i) {
+    if (node.child[i] >= 0) mask |= static_cast<uint8_t>(1u << i);
   }
-  os.write(reinterpret_cast<const char*>(&child_mask), sizeof(child_mask));
-  const auto& details = node.data();
-  os.write(reinterpret_cast<const char*>(details.data()),
-          sizeof(FloatingPoint) * Coefficients::kNumDetailCoefficients);
-  for (int i = 0; i < QuadtreeIndex::kNumChildren; ++i) {
-    if (node.hasChild(i)) {
-      writeNode(os, *node.getChild(i));
-    }
+  os.write(reinterpret_cast<const char*>(&mask), sizeof(mask));
+  os.write(reinterpret_cast<const char*>(node.detail.data()), sizeof(float) * 3);
+  for (int i = 0; i < 4; ++i) {
+    if (node.child[i] >= 0) writeNode(os, nodes, node.child[i]);
   }
 }
 
-void readNode(std::istream& is, QuadtreeType::NodeRefType node) {
-  uint8_t child_mask = 0;
-  is.read(reinterpret_cast<char*>(&child_mask), sizeof(child_mask));
-  is.read(reinterpret_cast<char*>(node.data().data()),
-         sizeof(FloatingPoint) * Coefficients::kNumDetailCoefficients);
-  for (int i = 0; i < QuadtreeIndex::kNumChildren; ++i) {
-    if (child_mask & (1u << i)) {
-      QuadtreeType::NodeRefType child = node.getOrAllocateChild(i);
-      readNode(is, child);
+// Reads one node (and its subtree) into `nodes`, returning its index.
+// `nodes[index] = ...` below always re-indexes rather than caching a
+// reference, since the recursive calls in between may reallocate `nodes`.
+int32_t readNode(std::istream& is, std::vector<Node>& nodes) {
+  uint8_t mask = 0;
+  is.read(reinterpret_cast<char*>(&mask), sizeof(mask));
+  Node node;
+  is.read(reinterpret_cast<char*>(node.detail.data()), sizeof(float) * 3);
+  const int32_t index = static_cast<int32_t>(nodes.size());
+  nodes.push_back(node);
+  for (int i = 0; i < 4; ++i) {
+    if (mask & (1u << i)) {
+      const int32_t child_index = readNode(is, nodes);
+      nodes[index].child[i] = child_index;
     }
   }
+  return index;
 }
+
+int64_t floorDiv(int64_t a, int64_t b) {
+  int64_t q = a / b;
+  const int64_t r = a % b;
+  if (r != 0 && ((r < 0) != (b < 0))) --q;
+  return q;
+}
+
+int64_t packBlockKey(int32_t bx, int32_t by) {
+  return (static_cast<int64_t>(bx) << 32) | static_cast<uint32_t>(by);
+}
+
+// Inverse of packBlockKey(); the uint32_t->int32_t cast below reinterprets
+// the low 32 bits as two's complement, which is what packBlockKey produced.
+void unpackBlockKey(int64_t key, int32_t& bx, int32_t& by) {
+  bx = static_cast<int32_t>(key >> 32);
+  by = static_cast<int32_t>(static_cast<uint32_t>(key & 0xffffffffLL));
+}
+
+constexpr char kMagic[4] = {'H', 'W', 'Q', '1'};
 
 }  // namespace
 
@@ -230,58 +266,61 @@ struct HashedWaveletQuadtree::Impl {
   int tree_height;
   double min_cell_width;
   float default_value;
-  wavemap::SpatialHash<QuadtreeBlock, kDim> block_map;
+  std::unordered_map<int64_t, Block> blocks;
 
   Impl(int tree_height, double min_cell_width, float default_value)
-      : tree_height(tree_height),
-        min_cell_width(min_cell_width),
-        default_value(default_value) {}
+      : tree_height(tree_height), min_cell_width(min_cell_width), default_value(default_value) {}
 
-  Index2D indexToBlockIndex(const QuadtreeIndex& node_index) const {
-    const Index2D min_corner_index =
-        wavemap::convert::nodeIndexToMinCornerIndex(node_index);
-    return wavemap::convert::indexToBlockIndex(min_corner_index, tree_height);
+  double blockWidth() const { return min_cell_width * static_cast<double>(int64_t(1) << tree_height); }
+
+  struct CellLocation {
+    int32_t bx, by;
+    int ix, iy;
+  };
+
+  CellLocation locate(const Eigen::Vector2d& world_position) const {
+    const int64_t gx = static_cast<int64_t>(std::floor(world_position.x() / min_cell_width));
+    const int64_t gy = static_cast<int64_t>(std::floor(world_position.y() / min_cell_width));
+    const int64_t cells_per_block = int64_t(1) << tree_height;
+    const int64_t bx = floorDiv(gx, cells_per_block);
+    const int64_t by = floorDiv(gy, cells_per_block);
+    return {static_cast<int32_t>(bx), static_cast<int32_t>(by), static_cast<int>(gx - bx * cells_per_block),
+            static_cast<int>(gy - by * cells_per_block)};
   }
 
-  QuadtreeIndex indexToCellIndex(QuadtreeIndex index) const {
-    const int height_difference = tree_height - index.height;
-    index.position = wavemap::int_math::div_exp2_floor_remainder(
-        index.position, height_difference);
-    return index;
+  float getCellValue(const Eigen::Vector2d& world_position, int height) const {
+    const CellLocation loc = locate(world_position);
+    const auto it = blocks.find(packBlockKey(loc.bx, loc.by));
+    if (it == blocks.end()) return default_value;
+    return it->second.getCellValue(loc.ix, loc.iy, height);
   }
 
-  QuadtreeIndex worldToNodeIndex(const Eigen::Vector2d& world_position,
-                                 int height) const {
-    const Point2D point = world_position.cast<FloatingPoint>();
-    return wavemap::convert::pointToNodeIndex<kDim>(
-        point, static_cast<FloatingPoint>(min_cell_width), height);
+  void addToCellValue(const Eigen::Vector2d& world_position, float delta) {
+    const CellLocation loc = locate(world_position);
+    Block& block = blocks.try_emplace(packBlockKey(loc.bx, loc.by), tree_height).first->second;
+    block.addToCellValue(loc.ix, loc.iy, delta);
   }
 
-  FloatingPoint getCellValue(const QuadtreeIndex& index) const {
-    const Index2D block_index = indexToBlockIndex(index);
-    const QuadtreeBlock* block = block_map.getBlock(block_index);
-    if (!block) {
-      return default_value;
-    }
-    return block->getCellValue(indexToCellIndex(index));
-  }
-
-  void setCellValue(const QuadtreeIndex& index, FloatingPoint value) {
-    const Index2D block_index = indexToBlockIndex(index);
-    QuadtreeBlock& block = block_map.getOrAllocateBlock(block_index, tree_height);
-    block.setCellValue(indexToCellIndex(index), value);
-  }
-
-  void addToCellValue(const QuadtreeIndex& index, FloatingPoint update) {
-    const Index2D block_index = indexToBlockIndex(index);
-    QuadtreeBlock& block = block_map.getOrAllocateBlock(block_index, tree_height);
-    block.addToCellValue(indexToCellIndex(index), update);
+  // NOTE: deliberately does NOT compute its delta from the public
+  // getCellValue() above. A not-yet-allocated block's true starting point
+  // (once allocated, right below) is 0.f -- its root_scale_ default --
+  // *not* `default_value` (that's a separate, block-existence-gated public
+  // API concept). Computing delta against `default_value` here would only
+  // be correct when default_value happens to be 0.f; for a nonzero
+  // default_value it would silently bake a `value - default_value` offset
+  // into a block whose real baseline is 0.f, corrupting every fresh
+  // block's first write by exactly `default_value`. So: allocate the block
+  // first, then diff against *its own* (block-internal, zero-baseline)
+  // current reconstruction, exactly like addToCellValue's delta already
+  // does for O(tree height) updates.
+  void setCellValue(const Eigen::Vector2d& world_position, float value) {
+    const CellLocation loc = locate(world_position);
+    Block& block = blocks.try_emplace(packBlockKey(loc.bx, loc.by), tree_height).first->second;
+    block.addToCellValue(loc.ix, loc.iy, value - block.getCellValue(loc.ix, loc.iy, 0));
   }
 };
 
-HashedWaveletQuadtree::HashedWaveletQuadtree(int tree_height,
-                                             double min_cell_width,
-                                             float default_value)
+HashedWaveletQuadtree::HashedWaveletQuadtree(int tree_height, double min_cell_width, float default_value)
     : impl_(std::make_unique<Impl>(tree_height, min_cell_width, default_value)) {}
 
 HashedWaveletQuadtree::~HashedWaveletQuadtree() = default;
@@ -292,25 +331,20 @@ float HashedWaveletQuadtree::getCellValue(const Eigen::Vector2d& world_position)
   return getCellValue(world_position, 0);
 }
 
-float HashedWaveletQuadtree::getCellValue(const Eigen::Vector2d& world_position,
-                                          int height) const {
-  return impl_->getCellValue(impl_->worldToNodeIndex(world_position, height));
+float HashedWaveletQuadtree::getCellValue(const Eigen::Vector2d& world_position, int height) const {
+  return impl_->getCellValue(world_position, height);
 }
 
-void HashedWaveletQuadtree::setCellValue(const Eigen::Vector2d& world_position,
-                                         float value) {
-  impl_->setCellValue(impl_->worldToNodeIndex(world_position, 0), value);
+void HashedWaveletQuadtree::setCellValue(const Eigen::Vector2d& world_position, float value) {
+  impl_->setCellValue(world_position, value);
 }
 
-void HashedWaveletQuadtree::addToCellValue(const Eigen::Vector2d& world_position,
-                                           float update) {
-  impl_->addToCellValue(impl_->worldToNodeIndex(world_position, 0), update);
+void HashedWaveletQuadtree::addToCellValue(const Eigen::Vector2d& world_position, float update) {
+  impl_->addToCellValue(world_position, update);
 }
 
-void HashedWaveletQuadtree::reconstructRegion(grid_map::GridMap& map,
-                                              const std::string& layer_name,
-                                              int query_height,
-                                              const Eigen::Vector2d& origin_offset) const {
+void HashedWaveletQuadtree::reconstructRegion(grid_map::GridMap& map, const std::string& layer_name,
+                                              int query_height, const Eigen::Vector2d& origin_offset) const {
   grid_map::Matrix& layer = map[layer_name];
   for (grid_map::GridMapIterator it(map); !it.isPastEnd(); ++it) {
     Eigen::Vector2d position;
@@ -320,69 +354,77 @@ void HashedWaveletQuadtree::reconstructRegion(grid_map::GridMap& map,
   }
 }
 
-double HashedWaveletQuadtree::getMinCellWidth() const {
-  return impl_->min_cell_width;
-}
+double HashedWaveletQuadtree::getMinCellWidth() const { return impl_->min_cell_width; }
 
 double HashedWaveletQuadtree::resolutionAtHeight(int height) const {
-  return impl_->min_cell_width * static_cast<double>(wavemap::int_math::exp2(height));
+  return impl_->min_cell_width * static_cast<double>(int64_t(1) << height);
 }
 
 int HashedWaveletQuadtree::getTreeHeight() const { return impl_->tree_height; }
 
 void HashedWaveletQuadtree::threshold() {
-  impl_->block_map.forEachBlock(
-      [](const Index2D& /*block_index*/, QuadtreeBlock& block) { block.threshold(); });
+  for (auto& block_entry : impl_->blocks) block_entry.second.threshold();
 }
 
 void HashedWaveletQuadtree::prune() {
-  impl_->block_map.forEachBlock(
-      [](const Index2D& /*block_index*/, QuadtreeBlock& block) { block.prune(); });
+  for (auto& block_entry : impl_->blocks) block_entry.second.prune();
 }
 
 size_t HashedWaveletQuadtree::getMemoryUsage() const {
   size_t total = 0;
-  impl_->block_map.forEachBlock(
-      [&total](const Index2D& /*block_index*/, const QuadtreeBlock& block) {
-        total += block.getMemoryUsage();
-      });
+  for (const auto& [key, block] : impl_->blocks) total += block.getMemoryUsage();
   return total;
 }
 
-bool HashedWaveletQuadtree::empty() const { return impl_->block_map.empty(); }
+bool HashedWaveletQuadtree::empty() const { return impl_->blocks.empty(); }
+
+std::vector<HashedWaveletQuadtree::BlockInfo> HashedWaveletQuadtree::getBlockInfo() const {
+  std::vector<BlockInfo> result;
+  result.reserve(impl_->blocks.size());
+  const double block_width = impl_->blockWidth();
+  for (const auto& [key, block] : impl_->blocks) {
+    int32_t bx, by;
+    unpackBlockKey(key, bx, by);
+    result.push_back(BlockInfo{Eigen::Vector2d(bx * block_width, by * block_width), block_width, block.rootScale(),
+                               block.nodes().size()});
+  }
+  return result;
+}
 
 bool HashedWaveletQuadtree::saveToFile(const std::string& path) const {
   std::ofstream os(path, std::ios::binary);
   if (!os) return false;
+  os.write(kMagic, sizeof(kMagic));
   const int32_t tree_height = impl_->tree_height;
   const double min_cell_width = impl_->min_cell_width;
   const float default_value = impl_->default_value;
-  uint64_t num_blocks = 0;
-  impl_->block_map.forEachBlock(
-      [&num_blocks](const Index2D&, const QuadtreeBlock&) { ++num_blocks; });
+  const uint64_t num_blocks = impl_->blocks.size();
   os.write(reinterpret_cast<const char*>(&tree_height), sizeof(tree_height));
   os.write(reinterpret_cast<const char*>(&min_cell_width), sizeof(min_cell_width));
   os.write(reinterpret_cast<const char*>(&default_value), sizeof(default_value));
   os.write(reinterpret_cast<const char*>(&num_blocks), sizeof(num_blocks));
-  bool ok = true;
-  impl_->block_map.forEachBlock([&os, &ok](const Index2D& block_index,
-                                           const QuadtreeBlock& block) {
-    if (!ok) return;
-    const int32_t bx = block_index.x();
-    const int32_t by = block_index.y();
+  for (const auto& [key, block] : impl_->blocks) {
+    int32_t bx, by;
+    unpackBlockKey(key, bx, by);
     os.write(reinterpret_cast<const char*>(&bx), sizeof(bx));
     os.write(reinterpret_cast<const char*>(&by), sizeof(by));
-    const Coefficients::Scale root_scale = block.rootScale();
+    const float root_scale = block.rootScale();
     os.write(reinterpret_cast<const char*>(&root_scale), sizeof(root_scale));
-    writeNode(os, block.rootNode());
-    if (!os) ok = false;
-  });
-  return ok && static_cast<bool>(os);
+    const uint8_t has_root = block.hasAnyNode() ? 1 : 0;
+    os.write(reinterpret_cast<const char*>(&has_root), sizeof(has_root));
+    if (has_root) writeNode(os, block.nodes(), block.rootIndex());
+    if (!os) return false;
+  }
+  return static_cast<bool>(os);
 }
 
 bool HashedWaveletQuadtree::loadFromFile(const std::string& path) {
   std::ifstream is(path, std::ios::binary);
   if (!is) return false;
+  char magic[4];
+  is.read(magic, sizeof(magic));
+  if (!is || std::memcmp(magic, kMagic, sizeof(kMagic)) != 0) return false;
+
   int32_t tree_height = 0;
   double min_cell_width = 0.0;
   float default_value = 0.0f;
@@ -396,16 +438,21 @@ bool HashedWaveletQuadtree::loadFromFile(const std::string& path) {
   auto new_impl = std::make_unique<Impl>(tree_height, min_cell_width, default_value);
   for (uint64_t i = 0; i < num_blocks; ++i) {
     int32_t bx = 0, by = 0;
+    float root_scale = 0.f;
+    uint8_t has_root = 0;
     is.read(reinterpret_cast<char*>(&bx), sizeof(bx));
     is.read(reinterpret_cast<char*>(&by), sizeof(by));
-    Coefficients::Scale root_scale = 0.f;
     is.read(reinterpret_cast<char*>(&root_scale), sizeof(root_scale));
+    is.read(reinterpret_cast<char*>(&has_root), sizeof(has_root));
     if (!is) return false;
-    QuadtreeBlock& block =
-        new_impl->block_map.getOrAllocateBlock(Index2D(bx, by), tree_height);
-    block.rootScale() = root_scale;
-    readNode(is, block.rootNode());
-    if (!is) return false;
+    Block block(tree_height);
+    block.setRootScale(root_scale);
+    if (has_root) {
+      const int32_t root_index = readNode(is, block.nodesMutable());
+      block.setRootIndex(root_index);
+      if (!is) return false;
+    }
+    new_impl->blocks.emplace(packBlockKey(bx, by), std::move(block));
   }
   impl_ = std::move(new_impl);
   return true;

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <Eigen/Dense>
 #include <grid_map_core/GridMap.hpp>
@@ -11,18 +12,31 @@
 /**
  * @brief A Haar-wavelet-compressed, hashed-block-sparse, multi-resolution 2D
  * scalar field, used to store an elevation (or elevation-variance) map at
- * Earth scale with bounded memory. Built on wavemap's (ethz-asl/wavemap,
- * BSD-3-Clause) generic, dimension/value-templated tree and hashing
- * primitives, instantiated here at dim=2 with a plain float value (rather
- * than wavemap's own dim=3 occupancy log-odds maps). wavemap's types are
- * kept out of this header (pimpl) so consumers of grid_map_geo do not need
- * to depend on wavemap directly.
+ * Earth scale with bounded memory. Self-contained (no external tree
+ * library): a 2D Haar wavelet transform over a hashed map of fixed-height
+ * quadtree blocks, each block backed by its own pooled, index-addressed node
+ * array (rather than per-node heap allocations) to avoid malloc-per-node
+ * overhead. Internal types are kept out of this header (pimpl) for a lean
+ * public interface.
+ *
+ * A locally-uniform region produces exactly-zero detail coefficients at
+ * every level (not just "small"), which is what lets prune() collapse whole
+ * subtrees of flat terrain -- this is the actual compression mechanism.
  *
  * Cell updates (getCellValue/setCellValue/addToCellValue) only touch a
  * leaf's ancestor path, i.e. they cost O(tree height), not O(map size).
  */
 class HashedWaveletQuadtree {
  public:
+  /// Snapshot of one allocated hashed block, for visualization/diagnostics
+  /// (e.g. an RViz display of the tree's block structure).
+  struct BlockInfo {
+    Eigen::Vector2d min_corner;      ///< World-frame min (south-west) corner.
+    double size;                     ///< Side length, in meters, of this (square) block.
+    float representative_value;      ///< Block's root scale coefficient (its coarse average).
+    size_t num_nodes;                ///< Allocated node count; cheap proxy for local detail retained.
+  };
+
   /**
    * @param tree_height height of the wavelet quadtree stored in each hashed
    * block (mirrors wavemap's HashedWaveletOctreeConfig::tree_height). Higher
@@ -88,6 +102,9 @@ class HashedWaveletQuadtree {
 
   size_t getMemoryUsage() const;
   bool empty() const;
+
+  /// Snapshot of all currently-allocated blocks (see BlockInfo).
+  std::vector<BlockInfo> getBlockInfo() const;
 
   /// Serialize the whole map (all allocated blocks) to a binary file.
   bool saveToFile(const std::string& path) const;
