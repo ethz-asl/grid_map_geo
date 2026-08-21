@@ -7,10 +7,8 @@
 
 #include <OgreManualObject.h>
 #include <OgreMaterialManager.h>
-#include <OgrePass.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
-#include <OgreTechnique.h>
 #include <rviz_rendering/material_manager.hpp>
 
 namespace grid_map_geo_rviz_plugin {
@@ -30,10 +28,11 @@ QuadtreeStructureVisual::QuadtreeStructureVisual(Ogre::SceneManager* scene_manag
   frame_node_ = parent_node->createChildSceneNode();
 
   const std::string name = nextInstanceName();
+  // No setVertexColourTracking() call needed: with lighting disabled (set
+  // by createMaterialWithNoLighting itself), per-vertex colour() already
+  // becomes the fragment color directly -- matches the same pattern
+  // grid_map_rviz_plugin's own GridMapVisual uses for its colored mesh.
   material_ = rviz_rendering::MaterialManager::createMaterialWithNoLighting(name + "Material");
-  // ManualObject::colour() per-vertex calls only affect rendering if the
-  // material is set to track vertex color for ambient/diffuse.
-  material_->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_AMBIENT | Ogre::TVC_DIFFUSE);
 
   manual_object_ = scene_manager_->createManualObject(name + "Object");
   frame_node_->attachObject(manual_object_);
@@ -66,11 +65,33 @@ void QuadtreeStructureVisual::setMessage(const grid_map_geo_msgs::msg::QuadtreeS
 
   rviz_rendering::MaterialManager::enableAlphaBlending(material_, alpha);
 
-  manual_object_->begin(material_->getName(), Ogre::RenderOperation::OT_LINE_LIST);
+  // Filled quads (two triangles each), not a wireframe outline: with real
+  // orthomosaic colors available (see cell.color below), a filled surface
+  // reads as actual terrain texture, not just a structure diagram.
+  //
+  // The "rviz_rendering" resource group argument is required: material_ was
+  // created via MaterialManager::createMaterialWithNoLighting(), which
+  // creates it specifically under that resource group (see
+  // grid_map_rviz_plugin's own GridMapVisual, which does the same
+  // three-argument begin() for exactly this reason). Omitting it makes
+  // Ogre look for the material in the default resource group instead,
+  // fail to find it there, and silently fall back to a flat grey
+  // placeholder material -- which renders fine geometrically but ignores
+  // per-vertex colour() entirely, exactly the "everything is grey"
+  // symptom this was fixing.
+  manual_object_->begin(material_->getName(), Ogre::RenderOperation::OT_TRIANGLE_LIST, "rviz_rendering");
   for (const auto& cell : msg.cells) {
-    const float t = std::clamp((cell.size - min_size) / size_range, 0.0f, 1.0f);
-    Ogre::ColourValue color = min_size_color * (1.0f - t) + max_size_color * t;
-    color.a = alpha;
+    Ogre::ColourValue color;
+    if (cell.color.a > 0.0f) {
+      // Real orthomosaic sample: respect the display's own Alpha property
+      // for transparency control rather than the message's own alpha
+      // (which just marks "color present", see QuadtreeCell.msg).
+      color = Ogre::ColourValue(cell.color.r, cell.color.g, cell.color.b, alpha);
+    } else {
+      const float t = std::clamp((cell.size - min_size) / size_range, 0.0f, 1.0f);
+      color = min_size_color * (1.0f - t) + max_size_color * t;
+      color.a = alpha;
+    }
 
     const float x0 = cell.min_corner.x;
     const float y0 = cell.min_corner.y;
@@ -80,10 +101,9 @@ void QuadtreeStructureVisual::setMessage(const grid_map_geo_msgs::msg::QuadtreeS
 
     const std::array<Ogre::Vector3, 4> corners = {Ogre::Vector3(x0, y0, z), Ogre::Vector3(x1, y0, z),
                                                    Ogre::Vector3(x1, y1, z), Ogre::Vector3(x0, y1, z)};
-    for (int i = 0; i < 4; ++i) {
-      manual_object_->position(corners[i]);
-      manual_object_->colour(color);
-      manual_object_->position(corners[(i + 1) % 4]);
+    constexpr std::array<int, 6> kTriangleIndices = {0, 1, 2, 0, 2, 3};
+    for (int index : kTriangleIndices) {
+      manual_object_->position(corners[index]);
       manual_object_->colour(color);
     }
   }

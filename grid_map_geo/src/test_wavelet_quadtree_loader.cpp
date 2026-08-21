@@ -39,6 +39,11 @@
  * @author Jaeyoung Lim <jalim@ethz.ch>
  */
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <vector>
+
 #include <grid_map_msgs/msg/grid_map.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
@@ -49,7 +54,77 @@
 
 #include "grid_map_geo/grid_map_geo.hpp"
 
+#if __APPLE__
+#include <gdal.h>
+#include <gdal_priv.h>
+#else
+#include <gdal/gdal.h>
+#include <gdal/gdal_priv.h>
+#endif
+
 using namespace std::chrono_literals;
+
+namespace {
+
+// Averages the RGB pixels of `dataset` (assumed >=3 bands) under the
+// world-frame footprint [world_min, world_min + size), converting via
+// `dataset`'s own geotransform (computed independently of the elevation
+// resolution, so this works even when the color raster isn't pixel-aligned
+// with its DEM -- it just happens to be, for davosdorf). Returns false if
+// the footprint doesn't overlap the raster at all.
+bool sampleAverageColor(GDALDataset* dataset, const std::array<double, 6>& geo_transform,
+                        const Eigen::Vector2d& world_min, double size, std_msgs::msg::ColorRGBA& out_color) {
+  const double origin_x = geo_transform[0];
+  const double origin_y = geo_transform[3];
+  const double pixel_size_x = geo_transform[1];
+  const double pixel_size_y = geo_transform[5];  // negative: image origin is north
+
+  const double px0 = (world_min.x() - origin_x) / pixel_size_x;
+  const double px1 = (world_min.x() + size - origin_x) / pixel_size_x;
+  const double py0 = (world_min.y() - origin_y) / pixel_size_y;
+  const double py1 = (world_min.y() + size - origin_y) / pixel_size_y;
+
+  const int width = dataset->GetRasterXSize();
+  const int height = dataset->GetRasterYSize();
+  int xoff = static_cast<int>(std::floor(std::min(px0, px1)));
+  int yoff = static_cast<int>(std::floor(std::min(py0, py1)));
+  int xsize = static_cast<int>(std::ceil(std::max(px0, px1))) - xoff;
+  int ysize = static_cast<int>(std::ceil(std::max(py0, py1))) - yoff;
+  xsize = std::max(xsize, 1);
+  ysize = std::max(ysize, 1);
+  if (xoff >= width || yoff >= height || xoff + xsize <= 0 || yoff + ysize <= 0) {
+    return false;  // footprint entirely outside the color raster
+  }
+  // Clamp the window to the raster bounds (a cell at the DEM's edge can
+  // extend slightly past the color raster if the two aren't identically
+  // sized).
+  const int clipped_xoff = std::max(xoff, 0);
+  const int clipped_yoff = std::max(yoff, 0);
+  xsize = std::min(xoff + xsize, width) - clipped_xoff;
+  ysize = std::min(yoff + ysize, height) - clipped_yoff;
+  xoff = clipped_xoff;
+  yoff = clipped_yoff;
+  if (xsize <= 0 || ysize <= 0) return false;
+
+  std::vector<uint8_t> buffer(static_cast<size_t>(xsize) * ysize);
+  std::array<double, 3> channel_mean{0.0, 0.0, 0.0};
+  for (int band = 0; band < 3; ++band) {
+    if (dataset->GetRasterBand(band + 1)->RasterIO(GF_Read, xoff, yoff, xsize, ysize, buffer.data(), xsize, ysize,
+                                                    GDT_Byte, 0, 0) != CE_None) {
+      return false;
+    }
+    double sum = 0.0;
+    for (uint8_t value : buffer) sum += value;
+    channel_mean[band] = sum / static_cast<double>(buffer.size());
+  }
+  out_color.r = static_cast<float>(channel_mean[0] / 255.0);
+  out_color.g = static_cast<float>(channel_mean[1] / 255.0);
+  out_color.b = static_cast<float>(channel_mean[2] / 255.0);
+  out_color.a = 1.0f;
+  return true;
+}
+
+}  // namespace
 
 class WaveletQuadtreeMapPublisher : public rclcpp::Node {
  public:
@@ -61,6 +136,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
     double extent_y = this->declare_parameter("extent_y", 500.0);
     int query_height = this->declare_parameter("query_height", 0);
     std::string frame_id = this->declare_parameter("frame_id", "map");
+    std::string color_path = this->declare_parameter("color_path", "");
 
     map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
     structure_pub_ = this->create_publisher<grid_map_geo_msgs::msg::QuadtreeStructure>("quadtree_structure", 1);
@@ -75,6 +151,48 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
       return;
     }
 
+    // The store doesn't change once loaded (this is a static demo loader,
+    // not an online updateElevation()/checkpoint() consumer), so the
+    // QuadtreeStructure message -- including any color sampling below,
+    // which would otherwise mean re-reading the color GeoTIFF for
+    // potentially tens of thousands of cells on every 5-second tick for no
+    // reason -- only needs to be built once, here, and just republished
+    // with a fresh timestamp from the timer callback.
+    structure_msg_.header.frame_id = map_->getGridMap().getFrameId();
+
+    EPSG epsg;
+    Eigen::Vector3d map_origin;
+    map_->getGlobalOrigin(epsg, map_origin);
+    const Eigen::Vector2d world_center = map_origin.head<2>();
+
+    GDALDatasetUniquePtr color_dataset;
+    std::array<double, 6> color_geo_transform{};
+    bool have_color = false;
+    if (!color_path.empty()) {
+      GDALAllRegister();
+      color_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(color_path.c_str(), GA_ReadOnly)));
+      if (color_dataset && color_dataset->GetGeoTransform(color_geo_transform.data()) == CE_None &&
+          color_dataset->GetRasterCount() >= 3) {
+        have_color = true;
+      } else {
+        RCLCPP_WARN_STREAM(get_logger(), "Failed to open color_path " << color_path << "; publishing without color");
+      }
+    }
+
+    for (const auto& cell : map_->getElevationCells()) {
+      grid_map_geo_msgs::msg::QuadtreeCell cell_msg;
+      cell_msg.min_corner.x = static_cast<float>(cell.min_corner.x());
+      cell_msg.min_corner.y = static_cast<float>(cell.min_corner.y());
+      cell_msg.min_corner.z = 0.0f;
+      cell_msg.size = static_cast<float>(cell.size);
+      cell_msg.elevation = cell.value;
+      if (have_color) {
+        const Eigen::Vector2d world_min = cell.min_corner + world_center;
+        sampleAverageColor(color_dataset.get(), color_geo_transform, world_min, cell.size, cell_msg.color);
+      }
+      structure_msg_.cells.push_back(cell_msg);
+    }
+
     auto timer_callback = [this]() -> void {
       auto msg = grid_map::GridMapRosConverter::toMessage(map_->getGridMap());
       if (msg) {
@@ -82,25 +200,10 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
         map_pub_->publish(std::move(msg));
       }
 
-      grid_map_geo_msgs::msg::QuadtreeStructure structure_msg;
-      structure_msg.header.stamp = now();
-      structure_msg.header.frame_id = map_->getGridMap().getFrameId();
-      for (const auto &cell : map_->getElevationCells()) {
-        grid_map_geo_msgs::msg::QuadtreeCell cell_msg;
-        cell_msg.min_corner.x = static_cast<float>(cell.min_corner.x());
-        cell_msg.min_corner.y = static_cast<float>(cell.min_corner.y());
-        cell_msg.min_corner.z = 0.0f;
-        cell_msg.size = static_cast<float>(cell.size);
-        cell_msg.elevation = cell.value;
-        structure_msg.cells.push_back(cell_msg);
-      }
-      structure_pub_->publish(structure_msg);
+      structure_msg_.header.stamp = now();
+      structure_pub_->publish(structure_msg_);
     };
     timer_ = this->create_wall_timer(5s, timer_callback);
-
-    EPSG epsg;
-    Eigen::Vector3d map_origin;
-    map_->getGlobalOrigin(epsg, map_origin);
 
     geometry_msgs::msg::TransformStamped static_transform_stamped;
     static_transform_stamped.header.frame_id = map_->getCoordinateName();
@@ -122,6 +225,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
   rclcpp::Publisher<grid_map_geo_msgs::msg::QuadtreeStructure>::SharedPtr structure_pub_;
   std::shared_ptr<GridMapGeo> map_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
+  grid_map_geo_msgs::msg::QuadtreeStructure structure_msg_;
 };
 
 int main(int argc, char **argv) {

@@ -15,3 +15,9 @@ float32 size
 
 # This cell's (already-reconstructed) elevation.
 float32 elevation
+
+# Orthomosaic color sampled over this cell's footprint, if available.
+# color.a == 0 (the default) means no color data was provided -- the
+# display falls back to coloring by cell size instead. A populated color
+# always has a == 1.0, so the two cases are unambiguous.
+std_msgs/ColorRGBA color

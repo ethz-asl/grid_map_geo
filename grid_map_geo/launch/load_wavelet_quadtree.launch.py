@@ -47,6 +47,7 @@ def generate_launch_description():
             {"extent_x": LaunchConfiguration("extent_x")},
             {"extent_y": LaunchConfiguration("extent_y")},
             {"query_height": LaunchConfiguration("query_height")},
+            {"color_path": LaunchConfiguration("color_path")},
         ],
         output="screen",
         emulate_tty=True,
@@ -94,6 +95,12 @@ def generate_launch_description():
                 "query_height",
                 default_value="0",
                 description="Wavelet quadtree resolution level to reconstruct at (0 = finest).",
+            ),
+            DeclareLaunchArgument(
+                "color_path",
+                default_value="",
+                description="Optional path to an orthomosaic GeoTIFF to color the quadtree_structure "
+                "overlay's cells from. Leave empty to color by cell size instead.",
             ),
             static_transform_publisher,
             wavelet_quadtree_loader,

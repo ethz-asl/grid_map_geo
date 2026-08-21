@@ -65,8 +65,13 @@ add_executable(test_wavelet_quadtree_loader
   src/test_wavelet_quadtree_loader.cpp
 )
 
+# Optionally samples an orthomosaic color GeoTIFF directly (see
+# sampleAverageColor() in the source), so it needs GDAL itself, not just
+# ${PROJECT_NAME} (whose own GDAL usage is private/hidden).
 target_link_libraries(test_wavelet_quadtree_loader PUBLIC
   ${PROJECT_NAME}
+PRIVATE
+  GDAL::GDAL
 )
 
 ament_target_dependencies(test_wavelet_quadtree_loader PUBLIC

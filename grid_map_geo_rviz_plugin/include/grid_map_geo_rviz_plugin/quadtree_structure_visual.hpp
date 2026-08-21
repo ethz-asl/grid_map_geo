@@ -17,24 +17,27 @@ class ManualObject;
 namespace grid_map_geo_rviz_plugin {
 
 /**
- * @brief Draws one flat wireframe square per cell of a
+ * @brief Draws one filled, flat quad per cell of a
  * grid_map_geo_msgs::msg::QuadtreeStructure message, at that cell's own
  * elevation (plus a small configurable Z offset to avoid z-fighting with
  * the terrain surface it's meant to sit on top of) -- unlike a per-block
  * "column" spanning an arbitrary shared vertical range, this directly shows
- * the tree's actual multi-resolution structure: large squares over
- * locally-uniform terrain, small squares wherever full detail is kept.
- * Color-coded by each cell's size (small/fine = one color, large/coarse =
- * the other), which is the direct visual signal of that structure.
+ * the tree's actual multi-resolution structure: large quads over
+ * locally-uniform terrain, small quads wherever full detail is kept. Each
+ * cell is colored by its own orthomosaic sample when the publisher provided
+ * one (QuadtreeCell::color, see that message), falling back to a size
+ * gradient (small/fine = one color, large/coarse = the other) otherwise --
+ * either way giving a direct visual signal of the tree's structure.
  *
- * Uses a plain Ogre::ManualObject (OT_LINE_LIST) rather than
+ * Uses a plain Ogre::ManualObject (OT_TRIANGLE_LIST) rather than
  * rviz_rendering::BillboardLine: BillboardLine packs many independent
  * lines into a fixed-capacity chain-container scheme sized from
  * max_points_per_line * num_lines up front, and real terrain easily
  * produces tens of thousands of cells (uncompressible/rugged terrain
  * barely compresses at all -- see HashedWaveletQuadtree's own docs), which
- * hit an "Exceeded max_points_per_line limit" crash in practice. A line
- * list has no such per-line bookkeeping or up-front capacity to get wrong.
+ * hit an "Exceeded max_points_per_line limit" crash in practice. A plain
+ * triangle list has no such per-line bookkeeping or up-front capacity to
+ * get wrong.
  */
 class QuadtreeStructureVisual {
  public:
@@ -45,11 +48,12 @@ class QuadtreeStructureVisual {
   QuadtreeStructureVisual& operator=(const QuadtreeStructureVisual&) = delete;
 
   /**
-   * @brief Rebuild the wireframe from `msg`.
+   * @brief Rebuild the filled cells from `msg`.
    *
-   * @param alpha line transparency, 0 (invisible) to 1 (opaque).
-   * @param elevation_offset added to every cell's Z, so the wireframe sits
-   * just above the terrain surface instead of z-fighting with it.
+   * @param alpha cell transparency, 0 (invisible) to 1 (opaque). Applied
+   * even when using a cell's own orthomosaic color (see setMessage's .cpp).
+   * @param elevation_offset added to every cell's Z, so the surface sits
+   * just above the terrain mesh instead of z-fighting with it.
    * @param min_size_color color for the smallest (finest) cells.
    * @param max_size_color color for the largest (coarsest) cells.
    * @param auto_compute_size_bounds if true, normalize each cell's color
