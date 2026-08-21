@@ -147,6 +147,79 @@ class Block {
     needs_prune_ = true;
   }
 
+  // Replaces the cell at (ix, iy, height) -- a square of side
+  // resolutionAtHeight(height) -- with a single flat `value`, discarding
+  // whatever finer structure previously existed underneath it. Used by
+  // boundedPrune() to materialize a merge decision directly, in ONE exact
+  // delta injection, rather than overwriting every one of the (up to
+  // 4^height) individual leaves via independent addToCellValue() calls:
+  // that many-small-overwrites approach measured real floating-point
+  // residue (a few millimeters, from repeatedly propagating slightly
+  // different per-leaf deltas through a shared, non-associatively-summed
+  // ancestor chain) that grows with block size/tree_height, so a region
+  // confirmed flat within a large max_error could still fail to visibly
+  // collapse. A single injection has no such accumulation to grow.
+  void flattenAtHeight(int ix, int iy, int height, float value) {
+    const float delta = value - getCellValue(ix, iy, height);
+    const int depth = tree_height_ - height;
+    if (depth == 0) {
+      // The "cell" is the whole block -- nothing to detach from an
+      // ancestor, just replace the block outright.
+      root_scale_ = value;
+      root_index_ = -1;
+      needs_threshold_ = false;
+      needs_prune_ = true;  // still true: reclaims now-orphaned nodes_ entries
+      return;
+    }
+    // Pass 1: allocate ancestors down to level `depth`, same shape as
+    // addToCellValue's own pass 1, just stopping `depth` levels early
+    // in the height > 0 case instead of always continuing to tree_height_.
+    std::array<int32_t, 64> path{};
+    int32_t parent_index = -1;
+    int parent_child_index = -1;
+    for (int level = 1; level <= depth; ++level) {
+      int32_t node_index = (parent_index < 0) ? root_index_ : nodes_[parent_index].child[parent_child_index];
+      if (node_index < 0) {
+        node_index = static_cast<int32_t>(nodes_.size());
+        nodes_.emplace_back();
+        if (parent_index < 0) {
+          root_index_ = node_index;
+        } else {
+          nodes_[parent_index].child[parent_child_index] = node_index;
+        }
+      }
+      path[level - 1] = node_index;
+      const int bit = tree_height_ - level;
+      parent_child_index = ((ix >> bit) & 1) | (((iy >> bit) & 1) << 1);
+      parent_index = node_index;
+    }
+    // Detach whatever subtree previously split this cell further -- without
+    // this, getCells() would keep recursing into stale finer structure
+    // instead of reporting this cell as one flat leaf. The detached nodes
+    // become unreachable garbage in nodes_, reclaimed by the next prune().
+    nodes_[parent_index].child[parent_child_index] = -1;
+
+    // Pass 2: inject `delta` bottom-up from level `depth` to the root --
+    // same math as addToCellValue's own pass 2, just starting `depth`
+    // levels up instead of always at the true leaf.
+    float running_delta = delta;
+    for (int level = depth; level >= 1; --level) {
+      const int bit = tree_height_ - level;
+      const int child_index = ((ix >> bit) & 1) | (((iy >> bit) & 1) << 1);
+      float scale_delta;
+      std::array<float, 3> detail_delta;
+      haarForwardSingleChild(running_delta, child_index, scale_delta, detail_delta);
+      Node& node = nodes_[path[level - 1]];
+      node.detail[0] += detail_delta[0];
+      node.detail[1] += detail_delta[1];
+      node.detail[2] += detail_delta[2];
+      running_delta = scale_delta;
+    }
+    root_scale_ += running_delta;
+    needs_threshold_ = true;
+    needs_prune_ = true;
+  }
+
   // Decomposes this block into its actual multi-resolution leaf cells (one
   // per already-collapsed subtree, at whatever level it stopped at -- see
   // walkCells). Cost is proportional to the number of allocated nodes, not
@@ -479,39 +552,32 @@ struct HashedWaveletQuadtree::Impl {
   }
 
   void boundedPrune(float max_error) {
-    const double cells_per_block = static_cast<double>(int64_t(1) << tree_height);
     std::vector<LocalCell> plan;
-    // Computing each block's plan BEFORE any rewriting, into a plain
+    // Computing each block's plan BEFORE applying it, into a plain
     // value-type vector (no references into the tree), then applying it
-    // afterward -- mixing the two would mean rewriting a block while
-    // still reading its (now-stale) merge decisions. Rewriting only ever
-    // touches the SAME block key already being iterated (every plan
-    // entry's coordinates stay within that block's own footprint, by
-    // construction -- see computeBoundedMergePlan), so this never inserts
-    // a new key into `blocks` and never invalidates this loop.
+    // afterward -- mixing the two would mean rewriting a block while still
+    // reading its (now-stale) merge decisions.
     for (auto& block_entry : blocks) {
-      int32_t bx, by;
-      unpackBlockKey(block_entry.first, bx, by);
       plan.clear();
       block_entry.second.computeBoundedMergePlan(max_error, plan);
-      if (plan.empty()) continue;
-      const Eigen::Vector2d block_min(bx * cells_per_block * min_cell_width, by * cells_per_block * min_cell_width);
       for (const LocalCell& lc : plan) {
-        for (int dx = 0; dx < lc.span; ++dx) {
-          for (int dy = 0; dy < lc.span; ++dy) {
-            const Eigen::Vector2d world_position =
-                block_min + Eigen::Vector2d(lc.local_x0 + dx + 0.5, lc.local_y0 + dy + 0.5) * min_cell_width;
-            setCellValue(world_position, lc.value);
-          }
-        }
+        // height = log2(span): span is always a power of two by
+        // construction (see walkCells/boundedMergeNode), so this always
+        // terminates exactly.
+        int height = 0;
+        while ((1 << height) < lc.span) ++height;
+        // One exact delta injection per merged region, not one independent
+        // overwrite per leaf underneath it: flattenAtHeight() directly
+        // replaces the whole (local_x0, local_y0) cell with `value` in a
+        // single operation, so there's no per-leaf floating-point residue
+        // to accumulate -- see flattenAtHeight's own comment for why that
+        // matters (it doesn't just shrink the old residue, it removes the
+        // mechanism that caused it, so this holds regardless of
+        // tree_height or how many cells a merge covers).
+        block_entry.second.flattenAtHeight(lc.local_x0, lc.local_y0, height, lc.value);
       }
     }
-    // The rewrite above makes every merged region exactly constant, so
-    // the existing lossless threshold()/prune() collapses it for free --
-    // all the actual tree mutation happens through code already covered
-    // by the rest of this class's test suite, not new coefficient math.
     for (auto& block_entry : blocks) {
-      block_entry.second.threshold();
       block_entry.second.prune();
     }
   }

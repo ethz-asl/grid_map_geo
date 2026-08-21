@@ -250,6 +250,33 @@ TEST(HashedWaveletQuadtree, BoundedPruneGuaranteesMaxErrorAcrossManyPoints) {
   }
 }
 
+TEST(HashedWaveletQuadtree, BoundedPruneFullyCollapsesDespiteFloatingPointResidue) {
+  // Regression test: rewriting many DISTINCT (but all within max_error of
+  // each other) values via independent setCellValue() calls, each
+  // propagating its own delta through a SHARED ancestor chain via
+  // non-associative float addition, leaves the leaves merely extremely
+  // close rather than bit-identical -- residuals of a few millimeters were
+  // observed on real terrain (a near-perfectly-flat 640m playa region that
+  // failed to fully collapse at a 30m tolerance despite a true elevation
+  // range of only a few centimeters). The cleanup epsilon must be loose
+  // enough to absorb that residue, not just kDetailEpsilon's near-bit-exact
+  // default (see kBoundedPruneCleanupEpsilon).
+  HashedWaveletQuadtree map(6, 1.0, 0.0f);  // 64x64 cells/block
+  constexpr float kBase = 1000.0f;  // large base value stresses float32 precision
+  for (int ix = 0; ix < 64; ++ix) {
+    for (int iy = 0; iy < 64; ++iy) {
+      const float value = kBase + 0.001f * static_cast<float>((ix * 67 + iy * 131) % 50);
+      map.setCellValue(Eigen::Vector2d(ix + 0.5, iy + 0.5), value);
+    }
+  }
+
+  map.boundedPrune(1.0f);  // true range here is < 0.05m, comfortably within 2*1.0
+
+  const auto cells = map.getCells(Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(64.0, 64.0));
+  EXPECT_EQ(cells.size(), 1u) << "a near-uniform region should fully collapse to one cell despite the rewrite's "
+                                 "own floating-point residue";
+}
+
 TEST(HashedWaveletQuadtree, MemoryUsageMuchSmallerThanDenseArrayForFlatRegion) {
   // A large, uniform (mostly-flat) region should compress to far less memory
   // than the naive dense-array equivalent -- this is the actual point of
