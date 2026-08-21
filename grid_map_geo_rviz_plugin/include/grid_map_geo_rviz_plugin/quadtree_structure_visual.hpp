@@ -27,7 +27,9 @@ namespace grid_map_geo_rviz_plugin {
  * cell is colored by its own orthomosaic sample when the publisher provided
  * one (QuadtreeCell::color, see that message), falling back to a size
  * gradient (small/fine = one color, large/coarse = the other) otherwise --
- * either way giving a direct visual signal of the tree's structure.
+ * either way giving a direct visual signal of the tree's structure. A solid
+ * outline around each cell's own boundary (optional, see setMessage) keeps
+ * that structure visible even when neighboring cells end up a similar color.
  *
  * Uses a plain Ogre::ManualObject (OT_TRIANGLE_LIST) rather than
  * rviz_rendering::BillboardLine: BillboardLine packs many independent
@@ -62,10 +64,15 @@ class QuadtreeStructureVisual {
    * tree's own finest resolution, so there's no fixed lower bound to use).
    * @param max_cell_size fixed normalization max, used only when
    * auto_compute_size_bounds is false.
+   * @param show_outlines if true, draw a solid line around each cell's own
+   * boundary on top of the fill, so the multi-resolution structure stays
+   * visible even where neighboring cells happen to share a similar color.
+   * @param outline_color color of those outlines.
    */
   void setMessage(const grid_map_geo_msgs::msg::QuadtreeStructure& msg, float alpha, float elevation_offset,
                   const Ogre::ColourValue& min_size_color, const Ogre::ColourValue& max_size_color,
-                  bool auto_compute_size_bounds, float max_cell_size);
+                  bool auto_compute_size_bounds, float max_cell_size, bool show_outlines,
+                  const Ogre::ColourValue& outline_color);
 
   void setFramePosition(const Ogre::Vector3& position);
   void setFrameOrientation(const Ogre::Quaternion& orientation);

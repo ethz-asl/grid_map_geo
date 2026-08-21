@@ -43,6 +43,16 @@ QuadtreeStructureDisplay::QuadtreeStructureDisplay() {
       "Max Cell Size", 64.0f, "Cell size that maps to Max Size Color, when Auto-Compute Size Bounds is false.",
       this, SLOT(updateVisualization()));
   max_cell_size_property_->setMin(0.0f);
+
+  show_outlines_property_ = new rviz_common::properties::BoolProperty(
+      "Show Cell Outlines", true,
+      "Draw a solid line around each cell's own boundary, so the multi-resolution structure stays visible "
+      "even when neighboring cells happen to share a similar fill color.",
+      this, SLOT(updateVisualization()));
+
+  outline_color_property_ = new rviz_common::properties::ColorProperty(
+      "Outline Color", QColor(0, 0, 0), "Color of the cell outlines, when Show Cell Outlines is true.", this,
+      SLOT(updateVisualization()));
 }
 
 QuadtreeStructureDisplay::~QuadtreeStructureDisplay() = default;
@@ -81,7 +91,8 @@ void QuadtreeStructureDisplay::processMessage(grid_map_geo_msgs::msg::QuadtreeSt
 
   visual_->setMessage(*msg, alpha_property_->getFloat(), elevation_offset_property_->getFloat(),
                       min_size_color_property_->getOgreColor(), max_size_color_property_->getOgreColor(),
-                      auto_compute_size_bounds_property_->getBool(), max_cell_size_property_->getFloat());
+                      auto_compute_size_bounds_property_->getBool(), max_cell_size_property_->getFloat(),
+                      show_outlines_property_->getBool(), outline_color_property_->getOgreColor());
 
   setStatus(rviz_common::properties::StatusProperty::Ok, "Topic", "OK");
 }

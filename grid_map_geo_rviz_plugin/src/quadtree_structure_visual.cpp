@@ -47,7 +47,8 @@ QuadtreeStructureVisual::~QuadtreeStructureVisual() {
 void QuadtreeStructureVisual::setMessage(const grid_map_geo_msgs::msg::QuadtreeStructure& msg, float alpha,
                                          float elevation_offset, const Ogre::ColourValue& min_size_color,
                                          const Ogre::ColourValue& max_size_color, bool auto_compute_size_bounds,
-                                         float max_cell_size) {
+                                         float max_cell_size, bool show_outlines,
+                                         const Ogre::ColourValue& outline_color) {
   manual_object_->clear();
   if (msg.cells.empty()) return;
 
@@ -108,6 +109,37 @@ void QuadtreeStructureVisual::setMessage(const grid_map_geo_msgs::msg::QuadtreeS
     }
   }
   manual_object_->end();
+
+  // Separate OT_LINE_LIST section (a ManualObject can't mix primitive types
+  // within one begin()/end()) tracing each cell's own 4 edges, drawn a hair
+  // above the fill (kOutlineZBias) to avoid z-fighting -- without this, a
+  // solid fill alone makes adjacent same-size/same-color cells (e.g. a
+  // large uniformly-colored merged region, or same-size cells sharing a
+  // similar orthomosaic sample) visually indistinguishable from one another,
+  // hiding the very multi-resolution structure this display exists to show.
+  if (show_outlines) {
+    constexpr float kOutlineZBias = 0.01f;
+    Ogre::ColourValue line_color = outline_color;
+    line_color.a = alpha;
+    manual_object_->begin(material_->getName(), Ogre::RenderOperation::OT_LINE_LIST, "rviz_rendering");
+    for (const auto& cell : msg.cells) {
+      const float x0 = cell.min_corner.x;
+      const float y0 = cell.min_corner.y;
+      const float x1 = x0 + cell.size;
+      const float y1 = y0 + cell.size;
+      const float z = cell.elevation + elevation_offset + kOutlineZBias;
+
+      const std::array<Ogre::Vector3, 4> corners = {Ogre::Vector3(x0, y0, z), Ogre::Vector3(x1, y0, z),
+                                                     Ogre::Vector3(x1, y1, z), Ogre::Vector3(x0, y1, z)};
+      for (int i = 0; i < 4; ++i) {
+        manual_object_->position(corners[i]);
+        manual_object_->colour(line_color);
+        manual_object_->position(corners[(i + 1) % 4]);
+        manual_object_->colour(line_color);
+      }
+    }
+    manual_object_->end();
+  }
 }
 
 void QuadtreeStructureVisual::setFramePosition(const Ogre::Vector3& position) { frame_node_->setPosition(position); }

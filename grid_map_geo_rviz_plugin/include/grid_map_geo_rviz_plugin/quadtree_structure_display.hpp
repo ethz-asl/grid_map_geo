@@ -47,6 +47,8 @@ class QuadtreeStructureDisplay
   rviz_common::properties::ColorProperty* max_size_color_property_;
   rviz_common::properties::BoolProperty* auto_compute_size_bounds_property_;
   rviz_common::properties::FloatProperty* max_cell_size_property_;
+  rviz_common::properties::BoolProperty* show_outlines_property_;
+  rviz_common::properties::ColorProperty* outline_color_property_;
 
   grid_map_geo_msgs::msg::QuadtreeStructure::ConstSharedPtr last_msg_;
 };

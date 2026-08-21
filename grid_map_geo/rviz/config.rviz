@@ -84,6 +84,8 @@ Visualization Manager:
       Max Size Color: 0; 128; 255
       Min Size Color: 255; 64; 0
       Name: QuadtreeStructure
+      Outline Color: 0; 0; 0
+      Show Cell Outlines: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
