@@ -132,8 +132,12 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
     std::string tile_store_dir = this->declare_parameter("tile_store_dir", ".");
     double center_x = this->declare_parameter("center_x", 0.0);
     double center_y = this->declare_parameter("center_y", 0.0);
-    double extent_x = this->declare_parameter("extent_x", 500.0);
-    double extent_y = this->declare_parameter("extent_y", 500.0);
+    // 0 (either) is a sentinel for "not given" -- load the store's own full
+    // extent (see extent.txt, written by generate_wavelet_quadtree) instead
+    // of a caller-guessed bounded region, so there's no boundary strip of
+    // never-written cells from an over-estimate.
+    double extent_x = this->declare_parameter("extent_x", 0.0);
+    double extent_y = this->declare_parameter("extent_y", 0.0);
     int query_height = this->declare_parameter("query_height", 0);
     std::string frame_id = this->declare_parameter("frame_id", "map");
     std::string color_path = this->declare_parameter("color_path", "");
@@ -145,9 +149,18 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
     tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
     map_ = std::make_shared<GridMapGeo>(frame_id);
-    if (!map_->LoadFromWaveletQuadtree(tile_store_dir, Eigen::Vector2d(center_x, center_y),
-                                       grid_map::Length(extent_x, extent_y), query_height)) {
-      RCLCPP_ERROR_STREAM(get_logger(), "Failed to load wavelet quadtree store from " << tile_store_dir);
+    const bool use_full_extent = extent_x <= 0.0 || extent_y <= 0.0;
+    const bool loaded = use_full_extent
+                            ? map_->LoadFromWaveletQuadtree(tile_store_dir, query_height)
+                            : map_->LoadFromWaveletQuadtree(tile_store_dir, Eigen::Vector2d(center_x, center_y),
+                                                            grid_map::Length(extent_x, extent_y), query_height);
+    if (!loaded) {
+      RCLCPP_ERROR_STREAM(get_logger(), "Failed to load wavelet quadtree store from "
+                                            << tile_store_dir
+                                            << (use_full_extent ? " (no extent_x/extent_y given and "
+                                                                  "extent.txt missing/malformed -- regenerate the "
+                                                                  "store, or pass extent_x/extent_y explicitly)"
+                                                                : ""));
       return;
     }
 

@@ -215,6 +215,26 @@ class GridMapGeo {
                                const grid_map::Length& extent, int query_height = 0);
 
   /**
+   * @brief Materialize the ENTIRE region a wavelet quadtree store covers,
+   * using the exact center/extent generate_wavelet_quadtree recorded for
+   * the source raster (tile_store_dir/extent.txt) -- unlike the overload
+   * above, the caller doesn't need to already know (or guess) the store's
+   * size, and there's no boundary of never-written (default-value) cells
+   * from an over-estimated extent. Only sensible for a store small enough
+   * to materialize in full (e.g. a demo/visualization load); an onboard
+   * vehicle should keep using the bounded-region overload above.
+   *
+   * @param tile_store_dir directory containing "elevation.wavelet_quadtree",
+   * "variance.wavelet_quadtree", and "extent.txt".
+   * @param query_height resolution level to reconstruct at (0 = finest).
+   * @return true Successfully read the extent and loaded the store.
+   * @return false extent.txt is missing/malformed (e.g. a store written
+   * before this metadata existed -- regenerate it), or the store failed
+   * to load.
+   */
+  bool LoadFromWaveletQuadtree(const std::string& tile_store_dir, int query_height = 0);
+
+  /**
    * @brief Whether the map is currently backed by a wavelet quadtree store
    * (i.e. LoadFromWaveletQuadtree() was used, as opposed to Load()).
    */

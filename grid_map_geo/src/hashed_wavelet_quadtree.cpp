@@ -453,9 +453,22 @@ struct HashedWaveletQuadtree::Impl {
         for (const LocalCell& lc : local_cells) {
           const double size = lc.span * min_cell_width;
           const Eigen::Vector2d min_corner = block_min + Eigen::Vector2d(lc.local_x0, lc.local_y0) * min_cell_width;
-          const Eigen::Vector2d max_corner = min_corner + Eigen::Vector2d(size, size);
-          if (max_corner.x() < region_min.x() || min_corner.x() > region_max.x() ||
-              max_corner.y() < region_min.y() || min_corner.y() > region_max.y()) {
+          // Include by CENTER falling in the region, not by any bounding-box
+          // overlap: hashed blocks (blockWidth() wide) don't generally
+          // divide evenly into a source raster's extent, so blocks along
+          // the true data's edge extend into never-written space beyond
+          // it. Those regions still collapse (they're uniformly
+          // default_value) into their own cells, which -- under a mere
+          // "touches the region at all" test -- would get reported even
+          // when barely inside (an edge-touching cell with zero-area
+          // overlap) or only marginally so (a large all-default padding
+          // cell whose bulk sits outside, see boundary bug report). A
+          // cell's center is representative of where it actually sits, and
+          // cheaply excludes both cases without needing to track "was this
+          // leaf ever explicitly written" as separate state.
+          const Eigen::Vector2d center_pos = min_corner + Eigen::Vector2d(size, size) * 0.5;
+          if (center_pos.x() < region_min.x() || center_pos.x() > region_max.x() ||
+              center_pos.y() < region_min.y() || center_pos.y() > region_max.y()) {
             continue;
           }
           result.push_back(HashedWaveletQuadtree::Cell{min_corner, size, lc.value});

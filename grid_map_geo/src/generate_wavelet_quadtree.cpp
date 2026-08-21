@@ -15,6 +15,8 @@
 #include <array>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -232,7 +234,23 @@ int main(int argc, char** argv) {
   std::filesystem::create_directories(args.output);
   const bool elevation_ok = elevation_tree.saveToFile(args.output + "/elevation.wavelet_quadtree");
   const bool variance_ok = variance_tree.saveToFile(args.output + "/variance.wavelet_quadtree");
-  if (!elevation_ok || !variance_ok) {
+
+  // Records the source raster's own exact extent, so a consumer (see
+  // GridMapGeo::LoadFromWaveletQuadtree's no-extent overload) can load the
+  // whole store without the caller having to separately know/guess its
+  // center and size -- guessing wrong (e.g. rounding up to be safe) leaves
+  // a boundary strip of never-written (default-value) cells around the
+  // true data, which is exactly the mismatch this file exists to avoid.
+  const double world_center_x = origin_x + pixel_size_x * width * 0.5;
+  const double world_center_y = origin_y + pixel_size_y * height * 0.5;
+  const double extent_x_m = std::abs(pixel_size_x) * width;
+  const double extent_y_m = std::abs(pixel_size_y) * height;
+  std::ofstream extent_file(args.output + "/extent.txt");
+  extent_file << std::setprecision(17) << world_center_x << " " << world_center_y << " " << extent_x_m << " "
+              << extent_y_m << "\n";
+  const bool extent_ok = static_cast<bool>(extent_file);
+
+  if (!elevation_ok || !variance_ok || !extent_ok) {
     std::cerr << "Failed to write wavelet quadtree store to " << args.output << "\n";
     return 1;
   }

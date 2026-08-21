@@ -74,22 +74,27 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "center_x",
                 default_value="0.0",
-                description="World-frame (projected meters) X center of the region to materialize.",
+                description="World-frame (projected meters) X center of the region to materialize. "
+                "Ignored unless extent_x/extent_y are both also given (see below).",
             ),
             DeclareLaunchArgument(
                 "center_y",
                 default_value="0.0",
-                description="World-frame (projected meters) Y center of the region to materialize.",
+                description="World-frame (projected meters) Y center of the region to materialize. "
+                "Ignored unless extent_x/extent_y are both also given (see below).",
             ),
             DeclareLaunchArgument(
                 "extent_x",
-                default_value="500.0",
-                description="Extent in X, in meters, of the region to materialize.",
+                default_value="0.0",
+                description="Extent in X, in meters, of the region to materialize. Leave at 0 (with "
+                "extent_y) to load the store's own full extent (extent.txt, written by "
+                "generate_wavelet_quadtree) instead of a bounded region -- no boundary strip, "
+                "no need to know the store's size up front.",
             ),
             DeclareLaunchArgument(
                 "extent_y",
-                default_value="500.0",
-                description="Extent in Y, in meters, of the region to materialize.",
+                default_value="0.0",
+                description="Extent in Y, in meters, of the region to materialize. See extent_x.",
             ),
             DeclareLaunchArgument(
                 "query_height",

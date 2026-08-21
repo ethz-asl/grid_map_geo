@@ -40,6 +40,7 @@
 #include "grid_map_geo/grid_map_geo.hpp"
 
 #include <array>
+#include <fstream>
 #include <grid_map_core/GridMapMath.hpp>
 #include <grid_map_core/iterators/CircleIterator.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
@@ -409,6 +410,16 @@ bool GridMapGeo::LoadFromWaveletQuadtree(const std::string &tile_store_dir, cons
   elevation_tree_->reconstructRegion(grid_map_, "elevation", query_height, center);
   variance_tree_->reconstructRegion(grid_map_, "elevation_variance", query_height, center);
   return true;
+}
+
+bool GridMapGeo::LoadFromWaveletQuadtree(const std::string &tile_store_dir, int query_height) {
+  std::ifstream extent_file(tile_store_dir + "/extent.txt");
+  if (!extent_file) return false;
+  double center_x = 0.0, center_y = 0.0, extent_x = 0.0, extent_y = 0.0;
+  extent_file >> center_x >> center_y >> extent_x >> extent_y;
+  if (!extent_file) return false;
+  return LoadFromWaveletQuadtree(tile_store_dir, Eigen::Vector2d(center_x, center_y),
+                                 grid_map::Length(extent_x, extent_y), query_height);
 }
 
 bool GridMapGeo::updateElevation(const Eigen::Vector2d &position, double measured_elevation,
