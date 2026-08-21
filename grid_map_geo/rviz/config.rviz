@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /GridMap1
+        - /QuadtreeStructure1
       Splitter Ratio: 0.5
     Tree Height: 1106
   - Class: rviz_common/Selection
@@ -73,6 +74,23 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /grid_map_geo/elevation_map
       Use Rainbow: true
+      Value: true
+    - Alpha: 1
+      Auto-Compute Size Bounds: true
+      Class: grid_map_geo_rviz_plugin/QuadtreeStructure
+      Elevation Offset: 0.05000000074505806
+      Enabled: true
+      Max Cell Size: 64
+      Max Size Color: 0; 128; 255
+      Min Size Color: 255; 64; 0
+      Name: QuadtreeStructure
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /grid_map_geo/quadtree_structure
       Value: true
   Enabled: true
   Global Options:

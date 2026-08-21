@@ -43,6 +43,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <grid_map_geo_msgs/msg/quadtree_structure.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -62,6 +63,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
     std::string frame_id = this->declare_parameter("frame_id", "map");
 
     map_pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>("elevation_map", 1);
+    structure_pub_ = this->create_publisher<grid_map_geo_msgs::msg::QuadtreeStructure>("quadtree_structure", 1);
 
     RCLCPP_INFO_STREAM(get_logger(), "tile_store_dir " << tile_store_dir);
     tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
@@ -79,6 +81,20 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
         msg->header.stamp = now();
         map_pub_->publish(std::move(msg));
       }
+
+      grid_map_geo_msgs::msg::QuadtreeStructure structure_msg;
+      structure_msg.header.stamp = now();
+      structure_msg.header.frame_id = map_->getGridMap().getFrameId();
+      for (const auto &cell : map_->getElevationCells()) {
+        grid_map_geo_msgs::msg::QuadtreeCell cell_msg;
+        cell_msg.min_corner.x = static_cast<float>(cell.min_corner.x());
+        cell_msg.min_corner.y = static_cast<float>(cell.min_corner.y());
+        cell_msg.min_corner.z = 0.0f;
+        cell_msg.size = static_cast<float>(cell.size);
+        cell_msg.elevation = cell.value;
+        structure_msg.cells.push_back(cell_msg);
+      }
+      structure_pub_->publish(structure_msg);
     };
     timer_ = this->create_wall_timer(5s, timer_callback);
 
@@ -103,6 +119,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
  private:
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr map_pub_;
+  rclcpp::Publisher<grid_map_geo_msgs::msg::QuadtreeStructure>::SharedPtr structure_pub_;
   std::shared_ptr<GridMapGeo> map_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 };

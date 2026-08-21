@@ -37,6 +37,15 @@ class HashedWaveletQuadtree {
     size_t num_nodes;                ///< Allocated node count; cheap proxy for local detail retained.
   };
 
+  /// One multi-resolution leaf cell, i.e. one already-collapsed subtree at
+  /// whatever level it stopped at -- large for locally-uniform terrain,
+  /// down to getMinCellWidth() where full detail is retained. See getCells().
+  struct Cell {
+    Eigen::Vector2d min_corner;      ///< World-frame min (south-west) corner.
+    double size;                     ///< Side length, in meters, of this (square) cell.
+    float value;                     ///< This cell's (already-reconstructed) value.
+  };
+
   /**
    * @param tree_height height of the wavelet quadtree stored in each hashed
    * block (mirrors wavemap's HashedWaveletOctreeConfig::tree_height). Higher
@@ -100,11 +109,43 @@ class HashedWaveletQuadtree {
   /// threshold() first if needed.
   void prune();
 
+  /**
+   * @brief Lossy-but-bounded compression: guarantees getCellValue() for any
+   * previously-set position is within max_error of its value from just
+   * before this call. Unlike threshold()/prune() (exact/lossless, and the
+   * only thing setCellValue/addToCellValue/checkpoint's fidelity relies
+   * on), this can deliberately coarsen genuinely-varying terrain -- use it
+   * only when max_error is a real, physically-meaningful tolerance (e.g. a
+   * vehicle's own characteristic size), not as a generic performance knob.
+   * The bound is checked directly against every actual leaf value
+   * underneath each candidate merge (their true min/max), not inferred
+   * from a coefficient magnitude, so it holds regardless of how many tree
+   * levels a region ends up collapsing through.
+   *
+   * @param max_error maximum allowed deviation, in the same units as cell
+   * values (meters, for an elevation tree), between any original value and
+   * its value after this call.
+   */
+  void boundedPrune(float max_error);
+
   size_t getMemoryUsage() const;
   bool empty() const;
 
   /// Snapshot of all currently-allocated blocks (see BlockInfo).
   std::vector<BlockInfo> getBlockInfo() const;
+
+  /**
+   * @brief Decompose the region [region_min, region_max] into its actual
+   * multi-resolution leaf cells (see Cell), for visualizing the tree's
+   * compression structure directly (e.g. an RViz overlay on top of a
+   * reconstructRegion()-derived terrain surface). Cost is proportional to
+   * the number of allocated nodes intersecting the region, i.e. to visual
+   * complexity, not to the region's area or resolution.
+   *
+   * @param region_min world-frame min (south-west) corner of the query region.
+   * @param region_max world-frame max (north-east) corner of the query region.
+   */
+  std::vector<Cell> getCells(const Eigen::Vector2d& region_min, const Eigen::Vector2d& region_max) const;
 
   /// Serialize the whole map (all allocated blocks) to a binary file.
   bool saveToFile(const std::string& path) const;

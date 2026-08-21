@@ -1,0 +1,7 @@
+<library path="grid_map_geo_rviz_plugin">
+  <class name="grid_map_geo_rviz_plugin/QuadtreeStructure"
+         type="grid_map_geo_rviz_plugin::QuadtreeStructureDisplay"
+         base_class_type="rviz_common::Display">
+    <description>Displays grid_map_geo_msgs/QuadtreeStructure messages (a HashedWaveletQuadtree's multi-resolution cell structure).</description>
+  </class>
+</library>

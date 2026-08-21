@@ -38,11 +38,13 @@ struct Args {
   std::string output;
   double prior_variance = 25.0;
   int tree_height = 6;
+  float max_error = 0.0f;
 };
 
 void printUsage() {
   std::cerr << "Usage: generate_wavelet_quadtree --input <geotiff> --output <dir>\n"
                "                                 [--prior-variance <value>] [--tree-height <n>]\n"
+               "                                 [--max-error <meters>]\n"
                "\n"
                "  --input           Path to the source elevation GeoTIFF.\n"
                "  --output          Output directory; will contain elevation.wavelet_quadtree\n"
@@ -51,7 +53,13 @@ void printUsage() {
                "                    i.e. how much to trust the source DSM before any onboard\n"
                "                    measurement has been fused in.\n"
                "  --tree-height     Wavelet quadtree height per hashed block (default: 6, i.e.\n"
-               "                    64x64 leaf cells per block).\n";
+               "                    64x64 leaf cells per block).\n"
+               "  --max-error       Lossy compression tolerance, in meters (default: 0, i.e.\n"
+               "                    disabled -- exact/lossless). When set, guarantees every\n"
+               "                    stored elevation is within this many meters of the source\n"
+               "                    value (see HashedWaveletQuadtree::boundedPrune) -- pick a\n"
+               "                    real, physically-meaningful tolerance (e.g. your vehicle's\n"
+               "                    own characteristic size), not a generic performance knob.\n";
 }
 
 bool parseArgs(int argc, char** argv, Args& args) {
@@ -66,6 +74,8 @@ bool parseArgs(int argc, char** argv, Args& args) {
       args.prior_variance = std::stod(next());
     } else if (arg == "--tree-height") {
       args.tree_height = std::stoi(next());
+    } else if (arg == "--max-error") {
+      args.max_error = std::stof(next());
     } else if (arg == "--help" || arg == "-h") {
       printUsage();
       std::exit(0);
@@ -211,7 +221,12 @@ int main(int argc, char** argv) {
   }
   std::cout << "\n";
 
-  elevation_tree.prune();
+  if (args.max_error > 0.0f) {
+    std::cout << "Applying bounded lossy compression (max error " << args.max_error << " m)...\n";
+    elevation_tree.boundedPrune(args.max_error);
+  } else {
+    elevation_tree.prune();
+  }
   variance_tree.prune();
 
   std::filesystem::create_directories(args.output);
@@ -227,6 +242,9 @@ int main(int argc, char** argv) {
             << "  cells inserted:     " << num_cells << " (" << num_skipped << " skipped, non-finite)\n"
             << "  resolution:         " << resolution << " m\n"
             << "  EPSG:               " << epsg << "\n"
+            << "  max error:          " << (args.max_error > 0.0f ? std::to_string(args.max_error) + " m (lossy)"
+                                                                   : std::string("0 (lossless)"))
+            << "\n"
             << "  elevation memory:   " << elevation_tree.getMemoryUsage() << " bytes (dense equivalent: "
             << dense_bytes << " bytes)\n"
             << "  variance memory:    " << variance_tree.getMemoryUsage()

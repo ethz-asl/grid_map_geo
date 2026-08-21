@@ -441,3 +441,20 @@ bool GridMapGeo::checkpoint() {
   const bool variance_ok = variance_tree_->saveToFile(wavelet_store_dir_ + "/variance.wavelet_quadtree");
   return elevation_ok && variance_ok;
 }
+
+std::vector<HashedWaveletQuadtree::Cell> GridMapGeo::getElevationCells() const {
+  if (!isWaveletBacked()) return {};
+  const Eigen::Vector2d center = maporigin_.position.head<2>();
+  const Eigen::Vector2d half_extent = grid_map_.getLength() / 2.0;
+  std::vector<HashedWaveletQuadtree::Cell> cells = elevation_tree_->getCells(center - half_extent, center + half_extent);
+  // The tree is indexed in an absolute/world frame; convert to local-frame
+  // coordinates (world minus map center) before returning, matching
+  // grid_map_'s own convention of being internally centered at local (0,0)
+  // -- callers (e.g. an RViz overlay under the same frame_id/TF as
+  // getGridMap()'s "elevation_map" topic) shouldn't need to know about the
+  // tree's world frame at all.
+  for (HashedWaveletQuadtree::Cell& cell : cells) {
+    cell.min_corner -= center;
+  }
+  return cells;
+}

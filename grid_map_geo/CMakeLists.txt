@@ -17,6 +17,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(grid_map_msgs REQUIRED)
+find_package(grid_map_geo_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -68,6 +69,10 @@ target_link_libraries(test_wavelet_quadtree_loader PUBLIC
   ${PROJECT_NAME}
 )
 
+ament_target_dependencies(test_wavelet_quadtree_loader PUBLIC
+  grid_map_geo_msgs
+)
+
 # Offline preprocessing CLI (GeoTIFF -> wavelet quadtree store); not a ROS
 # node, no rclcpp dependency. Reads the GDAL dataset directly (windowed
 # tiles, see generate_wavelet_quadtree.cpp), so it needs GDAL itself, not
@@ -107,7 +112,7 @@ install(
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 # Everything in find_package goes here too, ordered alphabetically.
-ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_msgs grid_map_ros tf2_ros rclcpp)
+ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_geo_msgs grid_map_msgs grid_map_ros tf2_ros rclcpp)
 
 install(
   TARGETS

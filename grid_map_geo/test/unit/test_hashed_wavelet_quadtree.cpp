@@ -113,6 +113,143 @@ TEST(HashedWaveletQuadtree, SaveLoadRoundTrip) {
   std::remove(path.c_str());
 }
 
+TEST(HashedWaveletQuadtree, GetCellsReturnsMultiResolutionTiling) {
+  HashedWaveletQuadtree map(6, 1.0, 0.0f);  // 64x64 cells/block
+
+  // Left half (x in [0,32)) is perfectly flat -> should collapse to large
+  // cells. Right half (x in [32,64)) has all-distinct values -> no group of
+  // sibling cells is ever uniform (a wavelet detail triple is exactly zero
+  // iff all 4 values are equal), so it must stay at the finest resolution.
+  for (int ix = 0; ix < 64; ++ix) {
+    for (int iy = 0; iy < 64; ++iy) {
+      const float value = (ix < 32) ? 42.0f : static_cast<float>(ix * 1000 + iy);
+      map.setCellValue(Eigen::Vector2d(ix + 0.5, iy + 0.5), value);
+    }
+  }
+  map.prune();
+
+  const auto cells = map.getCells(Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(64.0, 64.0));
+
+  // Tiling check: cells must exactly cover the region with no gaps or
+  // overlaps, and each cell's value must match a direct point query at its
+  // center.
+  double total_area = 0.0;
+  int flat_large_cells = 0;
+  int detailed_leaf_cells = 0;
+  for (const auto& cell : cells) {
+    total_area += cell.size * cell.size;
+    EXPECT_GE(cell.min_corner.x(), 0.0);
+    EXPECT_GE(cell.min_corner.y(), 0.0);
+    EXPECT_LE(cell.min_corner.x() + cell.size, 64.0);
+    EXPECT_LE(cell.min_corner.y() + cell.size, 64.0);
+
+    const Eigen::Vector2d center = cell.min_corner + Eigen::Vector2d(cell.size / 2.0, cell.size / 2.0);
+    EXPECT_NEAR(cell.value, map.getCellValue(center), 1e-2f);
+
+    if (cell.min_corner.x() + cell.size <= 32.0) {
+      EXPECT_GT(cell.size, 1.0) << "flat region should not stay at finest resolution";
+      ++flat_large_cells;
+    } else {
+      ASSERT_GE(cell.min_corner.x(), 32.0) << "cell straddles the flat/detailed boundary";
+      EXPECT_DOUBLE_EQ(cell.size, 1.0) << "all-distinct region must stay at finest resolution";
+      ++detailed_leaf_cells;
+    }
+  }
+  EXPECT_NEAR(total_area, 64.0 * 64.0, 1e-6);
+  EXPECT_EQ(flat_large_cells, 2);            // the flat half's two top-level quadrants each collapse to one cell
+  EXPECT_EQ(detailed_leaf_cells, 32 * 64);   // detailed half stays fully dense at 1m
+}
+
+TEST(HashedWaveletQuadtree, BoundedPruneCoarsensOnlyWithinTolerance) {
+  HashedWaveletQuadtree map(6, 1.0, 0.0f);  // 64x64 cells/block
+  constexpr float kMaxError = 1.0f;
+
+  // Left half (x in [0,32)): small, sub-tolerance variation (alternating
+  // 100.0/100.3, range 0.3 << 2*kMaxError) -- should coarsen. Right half
+  // (x in [32,64)): large variation (differs by ~1000 between adjacent x,
+  // by 1 between adjacent y -- verified below that no 2x2 group's range
+  // ever falls within 2*kMaxError) -- must stay at finest resolution.
+  for (int ix = 0; ix < 64; ++ix) {
+    for (int iy = 0; iy < 64; ++iy) {
+      const float value = (ix < 32) ? (100.0f + 0.3f * ((ix + iy) % 2)) : static_cast<float>(ix * 1000 + iy);
+      map.setCellValue(Eigen::Vector2d(ix + 0.5, iy + 0.5), value);
+    }
+  }
+
+  map.boundedPrune(kMaxError);
+  const auto cells = map.getCells(Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(64.0, 64.0));
+
+  double total_area = 0.0;
+  int flat_large_cells = 0;
+  int detailed_leaf_cells = 0;
+  for (const auto& cell : cells) {
+    total_area += cell.size * cell.size;
+    if (cell.min_corner.x() + cell.size <= 32.0) {
+      EXPECT_GT(cell.size, 1.0) << "sub-tolerance region should coarsen";
+      ++flat_large_cells;
+    } else {
+      ASSERT_GE(cell.min_corner.x(), 32.0) << "cell straddles the coarse/detailed boundary";
+      EXPECT_DOUBLE_EQ(cell.size, 1.0) << "over-tolerance region must stay at finest resolution";
+      ++detailed_leaf_cells;
+    }
+  }
+  EXPECT_NEAR(total_area, 64.0 * 64.0, 1e-6);
+  EXPECT_EQ(flat_large_cells, 2);
+  EXPECT_EQ(detailed_leaf_cells, 32 * 64);
+
+  // The actual guarantee: every original value is still within kMaxError.
+  for (int ix = 0; ix < 64; ++ix) {
+    for (int iy = 0; iy < 64; ++iy) {
+      const float original = (ix < 32) ? (100.0f + 0.3f * ((ix + iy) % 2)) : static_cast<float>(ix * 1000 + iy);
+      const Eigen::Vector2d p(ix + 0.5, iy + 0.5);
+      EXPECT_LE(std::abs(map.getCellValue(p) - original), kMaxError + 1e-3f)
+          << "at (" << ix << ", " << iy << ")";
+    }
+  }
+}
+
+TEST(HashedWaveletQuadtree, BoundedPruneNeverCorruptsAnIsolatedPointLikeTheNaiveThresholdDid) {
+  // Regression test for the failure mode that motivated boundedPrune():
+  // raising the plain wavelet-detail-coefficient threshold (kDetailEpsilon)
+  // to a large value zeroed out an isolated point update's own detail
+  // coefficient (which can be much smaller than the update itself -- e.g.
+  // a single 10.0 update produces a detail coefficient of just 2.5 at its
+  // own leaf split), silently deleting it rather than bounding its error.
+  // boundedPrune must not reproduce that: it checks true leaf values
+  // directly, not a transformed coefficient.
+  HashedWaveletQuadtree map(4, 1.0, 0.0f);
+  const Eigen::Vector2d p(3.5, 3.5);
+  map.setCellValue(p, 10.0f);
+  ASSERT_NEAR(map.getCellValue(p), 10.0f, 1e-3f);
+
+  map.boundedPrune(3.0f);
+
+  EXPECT_LE(std::abs(map.getCellValue(p) - 10.0f), 3.0f)
+      << "got " << map.getCellValue(p) << ", expected within 3.0 of 10.0";
+}
+
+TEST(HashedWaveletQuadtree, BoundedPruneGuaranteesMaxErrorAcrossManyPoints) {
+  HashedWaveletQuadtree map(4, 1.0, 0.0f);
+  constexpr float kMaxError = 5.0f;
+
+  std::vector<std::pair<Eigen::Vector2d, float>> samples;
+  for (int ix = -10; ix <= 10; ++ix) {
+    for (int iy = -10; iy <= 10; ++iy) {
+      const Eigen::Vector2d p(ix + 0.5, iy + 0.5);
+      const float value = static_cast<float>((ix * 7 + iy * 13) % 37) - 18.0f;
+      samples.emplace_back(p, value);
+      map.setCellValue(p, value);
+    }
+  }
+
+  map.boundedPrune(kMaxError);
+
+  for (const auto& [p, value] : samples) {
+    EXPECT_LE(std::abs(map.getCellValue(p) - value), kMaxError + 1e-3f)
+        << "at (" << p.x() << ", " << p.y() << ")";
+  }
+}
+
 TEST(HashedWaveletQuadtree, MemoryUsageMuchSmallerThanDenseArrayForFlatRegion) {
   // A large, uniform (mostly-flat) region should compress to far less memory
   // than the naive dense-array equivalent -- this is the actual point of

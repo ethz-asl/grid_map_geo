@@ -41,9 +41,8 @@
 #include <iostream>
 #include <memory>
 
+#include "grid_map_geo/hashed_wavelet_quadtree.hpp"
 #include "transform.hpp"
-
-class HashedWaveletQuadtree;
 
 struct Location {
   EPSG epsg{EPSG::WGS84};
@@ -246,6 +245,19 @@ class GridMapGeo {
    * @return false Not wavelet-backed, or the write failed.
    */
   bool checkpoint();
+
+  /**
+   * @brief Decompose the currently-materialized region (i.e. the same
+   * world-frame extent last passed to LoadFromWaveletQuadtree()) into its
+   * actual multi-resolution leaf cells (see HashedWaveletQuadtree::Cell),
+   * for visualizing the underlying quadtree's compression structure
+   * directly -- e.g. an RViz overlay on top of the elevation surface
+   * derived from getGridMap(). Only valid if isWaveletBacked().
+   *
+   * @return Multi-resolution cells in world-frame coordinates; empty if not
+   * wavelet-backed.
+   */
+  std::vector<HashedWaveletQuadtree::Cell> getElevationCells() const;
 
  protected:
   grid_map::GridMap grid_map_;

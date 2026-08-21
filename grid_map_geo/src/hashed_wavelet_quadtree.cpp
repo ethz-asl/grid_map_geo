@@ -68,6 +68,16 @@ void haarForwardSingleChild(float delta, int child_index, float& scale_delta, st
 // uniform up to floating-point noise, not just bit-exactly uniform.
 constexpr float kDetailEpsilon = 1e-3f;
 
+// One multi-resolution leaf cell within a single block, in LOCAL (cell-
+// index) units -- unit conversion to world-frame meters happens one level
+// up, in Impl::getCells(), consistent with Block otherwise knowing nothing
+// about world coordinates.
+struct LocalCell {
+  int local_x0, local_y0;  // south-west corner, in leaf-cell units
+  int span;                // side length, in leaf-cell units (a power of two)
+  float value;
+};
+
 // One hashed block: a fixed-height (tree_height) 2D Haar wavelet quadtree,
 // backed by a pooled, index-addressed node array.
 class Block {
@@ -135,6 +145,31 @@ class Block {
     root_scale_ += running_delta;
     needs_threshold_ = true;
     needs_prune_ = true;
+  }
+
+  // Decomposes this block into its actual multi-resolution leaf cells (one
+  // per already-collapsed subtree, at whatever level it stopped at -- see
+  // walkCells). Cost is proportional to the number of allocated nodes, not
+  // to tree_height or leaf count.
+  void collectCells(std::vector<LocalCell>& out) const { walkCells(root_index_, root_scale_, 0, 0, 0, out); }
+
+  // Computes a bounded-merge plan for this block: entries for every
+  // subtree that can be safely flattened to one value within max_error of
+  // every ORIGINAL leaf underneath it (checked directly against true
+  // min/max, not a coefficient threshold -- see boundedMergeNode). Emits
+  // nothing for regions that don't need to change (already-atomic leaves,
+  // or subtrees that don't qualify at any level). The caller is
+  // responsible for actually applying `plan` (this method only computes
+  // it; Block has no notion of world coordinates to rewrite cells with).
+  void computeBoundedMergePlan(float max_error, std::vector<LocalCell>& plan) const {
+    if (root_index_ < 0) return;  // already a single flat value; nothing to coarsen
+    const auto [min_v, max_v] = boundedMergeNode(root_index_, root_scale_, 0, 0, 0, max_error, plan);
+    if (max_v - min_v <= 2.0f * max_error) {
+      // The WHOLE block qualifies -- there's no ancestor above the block
+      // root to defer this commitment to (boundedMergeNode only commits
+      // on behalf of a node's *children*), so commit it here.
+      plan.push_back(LocalCell{0, 0, 1 << tree_height_, (min_v + max_v) * 0.5f});
+    }
   }
 
   void threshold() {
@@ -205,6 +240,88 @@ class Block {
     }
     out.push_back(node);
     return static_cast<int32_t>(out.size()) - 1;
+  }
+
+  // Breadth-first walk emitting one LocalCell per already-collapsed
+  // subtree. `node_index` is "the node that would split the square
+  // [local_x0, local_x0+span) x [local_y0, local_y0+span) further" (span =
+  // 2^(tree_height_-level)); if it's absent (-1), that square is uniform at
+  // `value` and gets emitted whole. No explicit "at max depth" check is
+  // needed: addToCellValue() never populates a node's child[] past
+  // level == tree_height_ (see its allocation loop), so node_index < 0
+  // already fires exactly at true leaves too -- same check, same code path.
+  // Reuses haarBackwardSingleChild (already exact/verified for point
+  // queries) applied to all 4 children instead of just the one on a
+  // point-query's path.
+  void walkCells(int32_t node_index, float value, int level, int local_x0, int local_y0,
+                 std::vector<LocalCell>& out) const {
+    if (node_index < 0) {
+      out.push_back(LocalCell{local_x0, local_y0, 1 << (tree_height_ - level), value});
+      return;
+    }
+    const Node& node = nodes_[node_index];
+    const int childspan = 1 << (tree_height_ - level - 1);
+    for (int i = 0; i < 4; ++i) {
+      const float child_value = haarBackwardSingleChild(value, node.detail, i);
+      const int cx = local_x0 + (i & 1) * childspan;
+      const int cy = local_y0 + ((i >> 1) & 1) * childspan;
+      walkCells(node.child[i], child_value, level + 1, cx, cy, out);
+    }
+  }
+
+  // Returns the TRUE (min, max) of every ORIGINAL leaf value underneath
+  // node_index (or just {value, value} if node_index < 0, i.e. this is
+  // already a single atomic value). This is exact regardless of tree
+  // depth -- min/max of a union is just the min/max of the parts' min/max
+  // -- so, unlike thresholding a wavelet detail coefficient, there is no
+  // compounding-error risk: a caller checking (max - min) against a
+  // tolerance is checking a real fact about the underlying data, not an
+  // approximation that can drift across levels.
+  //
+  // As a SIDE EFFECT, this commits a plan entry (into `plan`) for any
+  // CHILD of this node whose own subtree qualifies (its own true range
+  // fits within max_error) but THIS node's own combined range does not --
+  // i.e. it finds, for each branch, the LARGEST safe merge along that
+  // path, and defers committing a node that DOES qualify to its own
+  // parent (which might be able to extend the merge even further), only
+  // finalizing it at the point where extending no longer works. The
+  // block-level caller (computeBoundedMergePlan) handles the one case
+  // this can't: the whole block itself qualifying, since there's no
+  // ancestor above the block root to defer to.
+  std::pair<float, float> boundedMergeNode(int32_t node_index, float value, int level, int local_x0, int local_y0,
+                                           float max_error, std::vector<LocalCell>& plan) const {
+    if (node_index < 0) return {value, value};
+    const Node& node = nodes_[node_index];
+    const int childspan = 1 << (tree_height_ - level - 1);
+    std::array<std::pair<float, float>, 4> child_ranges;
+    std::array<int, 4> child_x{}, child_y{};
+    for (int i = 0; i < 4; ++i) {
+      const float child_value = haarBackwardSingleChild(value, node.detail, i);
+      child_x[i] = local_x0 + (i & 1) * childspan;
+      child_y[i] = local_y0 + ((i >> 1) & 1) * childspan;
+      child_ranges[i] = boundedMergeNode(node.child[i], child_value, level + 1, child_x[i], child_y[i], max_error, plan);
+    }
+    float combined_min = child_ranges[0].first;
+    float combined_max = child_ranges[0].second;
+    for (int i = 1; i < 4; ++i) {
+      combined_min = std::min(combined_min, child_ranges[i].first);
+      combined_max = std::max(combined_max, child_ranges[i].second);
+    }
+    if (combined_max - combined_min <= 2.0f * max_error) {
+      return {combined_min, combined_max};  // qualifies as a whole; defer to our own parent
+    }
+    // Doesn't qualify as a whole: commit whichever of our children do.
+    // (A child that doesn't qualify either already committed whatever DID
+    // qualify further down, inside its own recursive call above.)
+    for (int i = 0; i < 4; ++i) {
+      if (node.child[i] < 0) continue;  // already atomic at its current size; nothing to coarsen
+      const float child_min = child_ranges[i].first;
+      const float child_max = child_ranges[i].second;
+      if (child_max - child_min <= 2.0f * max_error) {
+        plan.push_back(LocalCell{child_x[i], child_y[i], childspan, (child_min + child_max) * 0.5f});
+      }
+    }
+    return {combined_min, combined_max};
   }
 };
 
@@ -318,6 +435,73 @@ struct HashedWaveletQuadtree::Impl {
     Block& block = blocks.try_emplace(packBlockKey(loc.bx, loc.by), tree_height).first->second;
     block.addToCellValue(loc.ix, loc.iy, value - block.getCellValue(loc.ix, loc.iy, 0));
   }
+
+  std::vector<HashedWaveletQuadtree::Cell> getCells(const Eigen::Vector2d& region_min,
+                                                     const Eigen::Vector2d& region_max) const {
+    std::vector<HashedWaveletQuadtree::Cell> result;
+    const CellLocation loc_min = locate(region_min);
+    const CellLocation loc_max = locate(region_max);
+    const double cells_per_block = static_cast<double>(int64_t(1) << tree_height);
+    std::vector<LocalCell> local_cells;
+    for (int32_t bx = loc_min.bx; bx <= loc_max.bx; ++bx) {
+      for (int32_t by = loc_min.by; by <= loc_max.by; ++by) {
+        const auto it = blocks.find(packBlockKey(bx, by));
+        if (it == blocks.end()) continue;
+        local_cells.clear();
+        it->second.collectCells(local_cells);
+        const Eigen::Vector2d block_min(bx * cells_per_block * min_cell_width, by * cells_per_block * min_cell_width);
+        for (const LocalCell& lc : local_cells) {
+          const double size = lc.span * min_cell_width;
+          const Eigen::Vector2d min_corner = block_min + Eigen::Vector2d(lc.local_x0, lc.local_y0) * min_cell_width;
+          const Eigen::Vector2d max_corner = min_corner + Eigen::Vector2d(size, size);
+          if (max_corner.x() < region_min.x() || min_corner.x() > region_max.x() ||
+              max_corner.y() < region_min.y() || min_corner.y() > region_max.y()) {
+            continue;
+          }
+          result.push_back(HashedWaveletQuadtree::Cell{min_corner, size, lc.value});
+        }
+      }
+    }
+    return result;
+  }
+
+  void boundedPrune(float max_error) {
+    const double cells_per_block = static_cast<double>(int64_t(1) << tree_height);
+    std::vector<LocalCell> plan;
+    // Computing each block's plan BEFORE any rewriting, into a plain
+    // value-type vector (no references into the tree), then applying it
+    // afterward -- mixing the two would mean rewriting a block while
+    // still reading its (now-stale) merge decisions. Rewriting only ever
+    // touches the SAME block key already being iterated (every plan
+    // entry's coordinates stay within that block's own footprint, by
+    // construction -- see computeBoundedMergePlan), so this never inserts
+    // a new key into `blocks` and never invalidates this loop.
+    for (auto& block_entry : blocks) {
+      int32_t bx, by;
+      unpackBlockKey(block_entry.first, bx, by);
+      plan.clear();
+      block_entry.second.computeBoundedMergePlan(max_error, plan);
+      if (plan.empty()) continue;
+      const Eigen::Vector2d block_min(bx * cells_per_block * min_cell_width, by * cells_per_block * min_cell_width);
+      for (const LocalCell& lc : plan) {
+        for (int dx = 0; dx < lc.span; ++dx) {
+          for (int dy = 0; dy < lc.span; ++dy) {
+            const Eigen::Vector2d world_position =
+                block_min + Eigen::Vector2d(lc.local_x0 + dx + 0.5, lc.local_y0 + dy + 0.5) * min_cell_width;
+            setCellValue(world_position, lc.value);
+          }
+        }
+      }
+    }
+    // The rewrite above makes every merged region exactly constant, so
+    // the existing lossless threshold()/prune() collapses it for free --
+    // all the actual tree mutation happens through code already covered
+    // by the rest of this class's test suite, not new coefficient math.
+    for (auto& block_entry : blocks) {
+      block_entry.second.threshold();
+      block_entry.second.prune();
+    }
+  }
 };
 
 HashedWaveletQuadtree::HashedWaveletQuadtree(int tree_height, double min_cell_width, float default_value)
@@ -370,6 +554,8 @@ void HashedWaveletQuadtree::prune() {
   for (auto& block_entry : impl_->blocks) block_entry.second.prune();
 }
 
+void HashedWaveletQuadtree::boundedPrune(float max_error) { impl_->boundedPrune(max_error); }
+
 size_t HashedWaveletQuadtree::getMemoryUsage() const {
   size_t total = 0;
   for (const auto& [key, block] : impl_->blocks) total += block.getMemoryUsage();
@@ -389,6 +575,11 @@ std::vector<HashedWaveletQuadtree::BlockInfo> HashedWaveletQuadtree::getBlockInf
                                block.nodes().size()});
   }
   return result;
+}
+
+std::vector<HashedWaveletQuadtree::Cell> HashedWaveletQuadtree::getCells(const Eigen::Vector2d& region_min,
+                                                                         const Eigen::Vector2d& region_max) const {
+  return impl_->getCells(region_min, region_max);
 }
 
 bool HashedWaveletQuadtree::saveToFile(const std::string& path) const {
