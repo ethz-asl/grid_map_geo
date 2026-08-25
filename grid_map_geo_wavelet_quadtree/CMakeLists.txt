@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.4)
-project(grid_map_geo)
+project(grid_map_geo_wavelet_quadtree)
 
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -16,15 +16,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(grid_map_core REQUIRED)
+find_package(grid_map_geo REQUIRED)
+find_package(grid_map_geo_msgs REQUIRED)
 find_package(grid_map_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
-find_package(grid_map_core REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(rclcpp REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(GDAL 3 REQUIRED)
-
 
 # Reverse compatability for GDAL<3.5
 # https://gdal.org/development/cmake.html
@@ -34,8 +35,8 @@ endif()
 
 # Build
 add_library(${PROJECT_NAME} SHARED
-  src/grid_map_geo.cpp
-  src/transform.cpp
+  src/hashed_wavelet_quadtree.cpp
+  src/wavelet_terrain_map.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -43,28 +44,57 @@ target_include_directories(${PROJECT_NAME}
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen PRIVATE GDAL::GDAL)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 
 ament_target_dependencies(${PROJECT_NAME} PUBLIC
   grid_map_core
+  grid_map_geo
+)
+
+# Offline preprocessing CLI (GeoTIFF -> wavelet quadtree store); not a ROS
+# node, no rclcpp dependency. Reads the GDAL dataset directly (windowed
+# tiles), so it needs GDAL itself.
+add_executable(generate_wavelet_quadtree
+  src/generate_wavelet_quadtree.cpp
+)
+
+target_link_libraries(generate_wavelet_quadtree PUBLIC
+  ${PROJECT_NAME}
+PRIVATE
+  GDAL::GDAL
+)
+
+# Demo/visualization ROS node: republishes a grid_map materialized from a
+# wavelet quadtree store, plus its multi-resolution cell structure. Also
+# samples an orthomosaic color GeoTIFF directly, so it needs GDAL itself.
+add_executable(test_wavelet_quadtree_loader
+  src/test_wavelet_quadtree_loader.cpp
+)
+
+target_link_libraries(test_wavelet_quadtree_loader PUBLIC
+  ${PROJECT_NAME}
+PRIVATE
+  GDAL::GDAL
+)
+
+ament_target_dependencies(test_wavelet_quadtree_loader PUBLIC
+  grid_map_geo_msgs
+  grid_map_msgs
   grid_map_ros
   tf2_ros
+  rclcpp
 )
 
-add_executable(test_tif_loader
-  src/test_tif_loader.cpp
+# Offline benchmarking CLI (per-query elevation access time of the dense
+# GeoTIFF-backed grid_map_geo vs. this package's wavelet quadtree store); not
+# a ROS node, no rclcpp dependency.
+add_executable(evaluate_access_time
+  src/evaluate_access_time.cpp
 )
 
-target_link_libraries(test_tif_loader PUBLIC
+target_link_libraries(evaluate_access_time PUBLIC
   ${PROJECT_NAME}
 )
-
-# Fix for yaml_cpp not resolving correctly on macOS
-# https://github.com/ethz-asl/grid_map_geo/pull/59#discussion_r1474669370
-if (APPLE)
-  find_package(yaml_cpp_vendor REQUIRED)
-  link_directories(${yaml_cpp_vendor_LIBRARY_DIRS})
-endif()
 
 # Install
 install(
@@ -84,11 +114,13 @@ install(
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 # Everything in find_package goes here too, ordered alphabetically.
-ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_msgs grid_map_ros tf2_ros rclcpp)
+ament_export_dependencies(Eigen3 GDAL grid_map_core grid_map_geo grid_map_geo_msgs grid_map_msgs grid_map_ros tf2_ros rclcpp)
 
 install(
   TARGETS
-  test_tif_loader
+  generate_wavelet_quadtree
+  test_wavelet_quadtree_loader
+  evaluate_access_time
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -99,11 +131,6 @@ install(DIRECTORY
 
 install(DIRECTORY
   rviz
-  DESTINATION share/${PROJECT_NAME}/
-)
-
-install(DIRECTORY
-  resources
   DESTINATION share/${PROJECT_NAME}/
 )
 

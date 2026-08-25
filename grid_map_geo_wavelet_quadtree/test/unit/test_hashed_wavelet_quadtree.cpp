@@ -6,7 +6,7 @@
 
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-#include "grid_map_geo/hashed_wavelet_quadtree.hpp"
+#include "grid_map_geo_wavelet_quadtree/hashed_wavelet_quadtree.hpp"
 
 TEST(HashedWaveletQuadtree, SetGetRoundTripAtFinestResolution) {
   HashedWaveletQuadtree map(/*tree_height=*/4, /*min_cell_width=*/1.0,

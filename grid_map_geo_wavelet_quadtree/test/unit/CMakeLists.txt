@@ -2,7 +2,8 @@
 find_package(ament_cmake_gtest)
 ament_add_gtest(${PROJECT_NAME}-test
   main.cpp
-  test_grid_map_geo.cpp
+  test_hashed_wavelet_quadtree.cpp
+  test_wavelet_terrain_map.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}-test

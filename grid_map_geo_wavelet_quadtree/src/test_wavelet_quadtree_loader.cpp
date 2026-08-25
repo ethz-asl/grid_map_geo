@@ -52,7 +52,7 @@
 #include <grid_map_ros/GridMapRosConverter.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "grid_map_geo/grid_map_geo.hpp"
+#include "grid_map_geo_wavelet_quadtree/wavelet_terrain_map.hpp"
 
 #if __APPLE__
 #include <gdal.h>
@@ -148,7 +148,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
     RCLCPP_INFO_STREAM(get_logger(), "tile_store_dir " << tile_store_dir);
     tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
-    map_ = std::make_shared<GridMapGeo>(frame_id);
+    map_ = std::make_shared<WaveletTerrainMap>(frame_id);
     const bool use_full_extent = extent_x <= 0.0 || extent_y <= 0.0;
     const bool loaded = use_full_extent
                             ? map_->LoadFromWaveletQuadtree(tile_store_dir, query_height)
@@ -236,7 +236,7 @@ class WaveletQuadtreeMapPublisher : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr map_pub_;
   rclcpp::Publisher<grid_map_geo_msgs::msg::QuadtreeStructure>::SharedPtr structure_pub_;
-  std::shared_ptr<GridMapGeo> map_;
+  std::shared_ptr<WaveletTerrainMap> map_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
   grid_map_geo_msgs::msg::QuadtreeStructure structure_msg_;
 };

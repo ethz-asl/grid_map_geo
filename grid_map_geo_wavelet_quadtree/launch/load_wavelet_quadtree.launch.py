@@ -21,7 +21,7 @@ def generate_launch_description():
     produce the store this launch file reads.
     """
 
-    pkg_grid_map_geo = get_package_share_directory("grid_map_geo")
+    pkg_grid_map_geo_wavelet_quadtree = get_package_share_directory("grid_map_geo_wavelet_quadtree")
 
     static_transform_publisher = Node(
         package="tf2_ros",
@@ -36,7 +36,7 @@ def generate_launch_description():
     )
 
     wavelet_quadtree_loader = Node(
-        package="grid_map_geo",
+        package="grid_map_geo_wavelet_quadtree",
         namespace="grid_map_geo",
         executable="test_wavelet_quadtree_loader",
         name="wavelet_quadtree_loader",
@@ -56,7 +56,7 @@ def generate_launch_description():
     rviz = Node(
         package="rviz2",
         executable="rviz2",
-        arguments=["-d", f'{Path(pkg_grid_map_geo) / "rviz" / "config.rviz"}'],
+        arguments=["-d", f'{Path(pkg_grid_map_geo_wavelet_quadtree) / "rviz" / "config.rviz"}'],
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
@@ -68,7 +68,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "tile_store_dir",
-                default_value=f'{Path(pkg_grid_map_geo) / "resources" / default_store_dir}',
+                default_value=f'{Path(pkg_grid_map_geo_wavelet_quadtree) / "resources" / default_store_dir}',
                 description="Directory containing elevation.wavelet_quadtree and variance.wavelet_quadtree.",
             ),
             DeclareLaunchArgument(

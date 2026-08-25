@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "grid_map_geo/hashed_wavelet_quadtree.hpp"
+#include "grid_map_geo_wavelet_quadtree/hashed_wavelet_quadtree.hpp"
 
 #if __APPLE__
 #include <gdal.h>
@@ -245,9 +245,13 @@ int main(int argc, char** argv) {
   const double world_center_y = origin_y + pixel_size_y * height * 0.5;
   const double extent_x_m = std::abs(pixel_size_x) * width;
   const double extent_y_m = std::abs(pixel_size_y) * height;
+  // The 5th field records the bounded-compression error tolerance applied
+  // above (0 if lossless), so a consumer that plans against this map (see
+  // GridMapGeo::getCompressionErrorBound) can inflate its safety margins by
+  // this amount rather than trusting the reconstructed elevation exactly.
   std::ofstream extent_file(args.output + "/extent.txt");
   extent_file << std::setprecision(17) << world_center_x << " " << world_center_y << " " << extent_x_m << " "
-              << extent_y_m << "\n";
+              << extent_y_m << " " << args.max_error << "\n";
   const bool extent_ok = static_cast<bool>(extent_file);
 
   if (!elevation_ok || !variance_ok || !extent_ok) {

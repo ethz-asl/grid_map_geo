@@ -1,11 +1,10 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>grid_map_geo</name>
+  <name>grid_map_geo_wavelet_quadtree</name>
   <version>0.0.1</version>
-  <description>Georeferenced grid map</description>
+  <description>Earth-scale, bounded-error-compressed elevation map representation (Haar-wavelet hashed quadtree) for grid_map_geo</description>
   <maintainer email="jalim@ethz.ch">Jaeyoung Lim</maintainer>
-  <maintainer email="ryanfriedman5410+github@gmail.com">Ryan Friedman</maintainer>
   <author>Jaeyoung Lim</author>
   <license>BSD-3</license>
 
@@ -15,17 +14,20 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>eigen</depend>
   <depend>grid_map_core</depend>
+  <depend>grid_map_geo</depend>
+  <depend>grid_map_geo_msgs</depend>
+  <depend>grid_map_msgs</depend>
   <depend>grid_map_ros</depend>
   <depend>tf2_ros</depend>
   <depend>libgdal-dev</depend>
   <depend>rclcpp</depend>
-  <depend>yaml_cpp_vendor</depend>
 
   <exec_depend>grid_map_rviz_plugin</exec_depend>
   <exec_depend>grid_map_geo_rviz_plugin</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>rviz2</exec_depend>
 
+  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>clang-format</test_depend>
 
   <export>

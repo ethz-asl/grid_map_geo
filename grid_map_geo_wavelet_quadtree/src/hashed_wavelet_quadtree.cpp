@@ -1,4 +1,4 @@
-#include "grid_map_geo/hashed_wavelet_quadtree.hpp"
+#include "grid_map_geo_wavelet_quadtree/hashed_wavelet_quadtree.hpp"
 
 #include <array>
 #include <cmath>

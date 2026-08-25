@@ -1,12 +1,13 @@
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 
 #include <gtest/gtest.h>
 
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 
-#include "grid_map_geo/grid_map_geo.hpp"
-#include "grid_map_geo/hashed_wavelet_quadtree.hpp"
+#include "grid_map_geo_wavelet_quadtree/wavelet_terrain_map.hpp"
+#include "grid_map_geo_wavelet_quadtree/hashed_wavelet_quadtree.hpp"
 
 namespace {
 
@@ -14,7 +15,7 @@ namespace {
 // `dir`, with elevation following a known analytic surface z = x + 2*y (in
 // *world*/absolute coordinates, i.e. the same frame `center` is given in),
 // and a uniform variance. Mirrors the directory/file layout that
-// GridMapGeo::LoadFromWaveletQuadtree() and checkpoint() expect.
+// WaveletTerrainMap::LoadFromWaveletQuadtree() and checkpoint() expect.
 void buildWaveletQuadtreeStore(const std::string& dir, const Eigen::Vector2d& world_min,
                                int cells_per_side, float variance_value) {
   std::filesystem::create_directories(dir);
@@ -34,13 +35,13 @@ void buildWaveletQuadtreeStore(const std::string& dir, const Eigen::Vector2d& wo
 
 }  // namespace
 
-TEST(GridMapGeoWaveletQuadtree, LoadMaterializesExpectedElevationAndVariance) {
+TEST(WaveletTerrainMapTest, LoadMaterializesExpectedElevationAndVariance) {
   const std::string dir = "/tmp/test_grid_map_geo_wavelet_store_load";
   std::filesystem::remove_all(dir);
   const Eigen::Vector2d center(1000.0, 2000.0);
   buildWaveletQuadtreeStore(dir, center - Eigen::Vector2d(5.0, 5.0), 10, 25.0f);
 
-  GridMapGeo map;
+  WaveletTerrainMap map;
   ASSERT_TRUE(map.LoadFromWaveletQuadtree(dir, center, grid_map::Length(8.0, 8.0), /*query_height=*/0));
   EXPECT_TRUE(map.isWaveletBacked());
 
@@ -60,13 +61,13 @@ TEST(GridMapGeoWaveletQuadtree, LoadMaterializesExpectedElevationAndVariance) {
   }
 }
 
-TEST(GridMapGeoWaveletQuadtree, UpdateElevationBlendsAndPersistsAcrossReload) {
+TEST(WaveletTerrainMapTest, UpdateElevationBlendsAndPersistsAcrossReload) {
   const std::string dir = "/tmp/test_grid_map_geo_wavelet_store_update";
   std::filesystem::remove_all(dir);
   const Eigen::Vector2d center(500.0, -300.0);
   buildWaveletQuadtreeStore(dir, center - Eigen::Vector2d(5.0, 5.0), 10, 100.0f);
 
-  GridMapGeo map;
+  WaveletTerrainMap map;
   ASSERT_TRUE(map.LoadFromWaveletQuadtree(dir, center, grid_map::Length(8.0, 8.0), 0));
 
   // Pick an actual grid cell center (rather than a hand-picked coordinate
@@ -94,9 +95,9 @@ TEST(GridMapGeoWaveletQuadtree, UpdateElevationBlendsAndPersistsAcrossReload) {
 
   ASSERT_TRUE(map.checkpoint());
 
-  // A fresh GridMapGeo reloading the SAME store should see the fused values,
+  // A fresh WaveletTerrainMap reloading the SAME store should see the fused values,
   // not the original prior -- this is the actual point of checkpoint().
-  GridMapGeo reloaded;
+  WaveletTerrainMap reloaded;
   ASSERT_TRUE(reloaded.LoadFromWaveletQuadtree(dir, center, grid_map::Length(8.0, 8.0), 0));
   EXPECT_NEAR(reloaded.getGridMap().atPosition("elevation", local), fused_elevation, 1e-1);
   EXPECT_NEAR(reloaded.getGridMap().atPosition("elevation_variance", local), fused_variance, 1e-1);
@@ -116,8 +117,47 @@ TEST(GridMapGeoWaveletQuadtree, UpdateElevationBlendsAndPersistsAcrossReload) {
              untouched_world.x() + 2.0 * untouched_world.y(), 1e-1);
 }
 
-TEST(GridMapGeoWaveletQuadtree, UpdateElevationFailsWhenNotWaveletBacked) {
-  GridMapGeo map;
+TEST(WaveletTerrainMapTest, CompressionErrorBoundIsReadFromExtentFile) {
+  const std::string dir = "/tmp/test_grid_map_geo_wavelet_store_error_bound";
+  std::filesystem::remove_all(dir);
+  const Eigen::Vector2d center(100.0, 200.0);
+  buildWaveletQuadtreeStore(dir, center - Eigen::Vector2d(5.0, 5.0), 10, 1.0f);
+  {
+    std::ofstream extent_file(dir + "/extent.txt");
+    extent_file << center.x() << " " << center.y() << " " << 8.0 << " " << 8.0 << " " << 3.5 << "\n";
+  }
+
+  WaveletTerrainMap map;
+  ASSERT_TRUE(map.LoadFromWaveletQuadtree(dir, /*query_height=*/0));
+  EXPECT_NEAR(map.getCompressionErrorBound(), 3.5, 1e-9);
+
+  // The bounded-region overload should pick up the same bound even though
+  // it doesn't use extent.txt for center/extent, since the bound is a
+  // property of the store, not of the queried region.
+  WaveletTerrainMap map_explicit_region;
+  ASSERT_TRUE(
+      map_explicit_region.LoadFromWaveletQuadtree(dir, center, grid_map::Length(8.0, 8.0), /*query_height=*/0));
+  EXPECT_NEAR(map_explicit_region.getCompressionErrorBound(), 3.5, 1e-9);
+}
+
+TEST(WaveletTerrainMapTest, CompressionErrorBoundDefaultsToZeroForOlderStoreFormat) {
+  const std::string dir = "/tmp/test_grid_map_geo_wavelet_store_no_error_bound_field";
+  std::filesystem::remove_all(dir);
+  const Eigen::Vector2d center(0.0, 0.0);
+  buildWaveletQuadtreeStore(dir, center - Eigen::Vector2d(5.0, 5.0), 10, 1.0f);
+  {
+    // Older stores (written before this field existed) only have 4 fields.
+    std::ofstream extent_file(dir + "/extent.txt");
+    extent_file << center.x() << " " << center.y() << " " << 8.0 << " " << 8.0 << "\n";
+  }
+
+  WaveletTerrainMap map;
+  ASSERT_TRUE(map.LoadFromWaveletQuadtree(dir, /*query_height=*/0));
+  EXPECT_NEAR(map.getCompressionErrorBound(), 0.0, 1e-9);
+}
+
+TEST(WaveletTerrainMapTest, UpdateElevationFailsWhenNotWaveletBacked) {
+  WaveletTerrainMap map;
   EXPECT_FALSE(map.isWaveletBacked());
   EXPECT_FALSE(map.updateElevation(Eigen::Vector2d(0.0, 0.0), 10.0, 1.0));
   EXPECT_FALSE(map.checkpoint());
