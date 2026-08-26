@@ -16,9 +16,13 @@ def generate_launch_description():
     Companion to load_tif.launch.py, for manually comparing (e.g. side by
     side in RViz, or by diffing the published grid_map_msgs/GridMap
     messages) a wavelet-quadtree-backed load against the monolithic-GeoTIFF
-    path over the same source dataset -- run
-    `generate_wavelet_quadtree --input <tif> --output <dir>` first to
-    produce the store this launch file reads.
+    path over the same source dataset -- run generate_wavelet_quadtree.launch.py
+    first to produce the store this launch file reads. `tile_store_dir`
+    defaults to the same location-keyed path
+    (share/grid_map_geo_wavelet_quadtree/resources/<location>_wavelet_quadtree)
+    that generate_wavelet_quadtree.launch.py's `output` also defaults to for
+    the same `location`, so e.g. `location:=wsmr` on both finds the store
+    without either launch file needing an explicit path.
     """
 
     pkg_grid_map_geo_wavelet_quadtree = get_package_share_directory("grid_map_geo_wavelet_quadtree")
@@ -60,16 +64,28 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
-    default_store_dir = "sargans_wavelet_quadtree"
+    default_location = "wsmr"
     return LaunchDescription(
         [
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
             ),
             DeclareLaunchArgument(
+                "location",
+                default_value=default_location,
+                description="Location key matching the `location` given to "
+                "generate_wavelet_quadtree.launch.py when the store was produced. "
+                "Ignored if `tile_store_dir` is also given.",
+            ),
+            DeclareLaunchArgument(
                 "tile_store_dir",
-                default_value=f'{Path(pkg_grid_map_geo_wavelet_quadtree) / "resources" / default_store_dir}',
-                description="Directory containing elevation.wavelet_quadtree and variance.wavelet_quadtree.",
+                default_value=[
+                    f'{Path(pkg_grid_map_geo_wavelet_quadtree) / "resources"}/',
+                    LaunchConfiguration("location"),
+                    "_wavelet_quadtree",
+                ],
+                description="Directory containing elevation.wavelet_quadtree and "
+                "variance.wavelet_quadtree. Overrides `location`.",
             ),
             DeclareLaunchArgument(
                 "center_x",

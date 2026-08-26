@@ -14,16 +14,17 @@ def generate_launch_description():
 
     Runs the offline generate_wavelet_quadtree CLI (see
     src/generate_wavelet_quadtree.cpp) against a source GeoTIFF from the
-    terrain_models package, keyed by `location` -- e.g. `location:=sargans`
-    looks up terrain_models/models/sargans.tif. Pass `input` directly to
-    bypass the terrain_models lookup entirely (e.g. for a GeoTIFF that isn't
-    in that package). The resulting store defaults to the same
+    thermal_navigation_ros package's resources directory, keyed by
+    `location` -- e.g. `location:=wsmr` looks up
+    thermal_navigation_ros/resources/wsmr.tif. Pass `input` directly to
+    bypass that lookup entirely (e.g. for a GeoTIFF that isn't in that
+    package). The resulting store defaults to the same
     share/grid_map_geo_wavelet_quadtree/resources/<location>_wavelet_quadtree
     path that load_wavelet_quadtree.launch.py's `tile_store_dir` defaults to
     for the same location, so the two launch files chain without extra args.
     """
 
-    pkg_terrain_models = get_package_share_directory("terrain_models")
+    pkg_thermal_navigation_ros = get_package_share_directory("thermal_navigation_ros")
     pkg_grid_map_geo_wavelet_quadtree = get_package_share_directory("grid_map_geo_wavelet_quadtree")
 
     generate_wavelet_quadtree = ExecuteProcess(
@@ -44,19 +45,19 @@ def generate_launch_description():
         emulate_tty=True,
     )
 
-    default_location = "sargans"
+    default_location = "wsmr"
     return LaunchDescription(
         [
             DeclareLaunchArgument(
                 "location",
                 default_value=default_location,
-                description="Name of a terrain_models/models/<location>.tif GeoTIFF to ingest. "
-                "Ignored if `input` is also given.",
+                description="Name of a thermal_navigation_ros/resources/<location>.tif GeoTIFF "
+                "to ingest. Ignored if `input` is also given.",
             ),
             DeclareLaunchArgument(
                 "input",
                 default_value=[
-                    f'{Path(pkg_terrain_models) / "models"}/',
+                    f'{Path(pkg_thermal_navigation_ros) / "resources"}/',
                     LaunchConfiguration("location"),
                     ".tif",
                 ],
